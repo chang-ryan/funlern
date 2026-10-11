@@ -6,7 +6,7 @@ Shared copy: https://claude.ai/code/artifact/c40870de-a8d2-482f-8c9c-b1bdfd36cc1
 
 funlern is an interactive learning app, not a general chat clone. You start by saying what you want to learn, set a minimal goal, then work through it: highlight any passage to ask about it in a side thread, answer clarifying questions and pop quizzes as cards, and earn progress as you go. The first user is me, learning faster; it doubles as a showcase.
 
-Status: the backend is scaffolded and builds (auth, schema, chat and thread routes, Claude only). The UI is unstyled stubs, waiting on mocks. Nothing is committed yet.
+Status as of 2026-10-10: sign in, start a conversation and chat with Claude, saved to Postgres, all running locally on `supabase start`. The thread API exists; the thread UI (highlight, Ask popover, rail) is next. Committed on `feat/scaffold` (1651ff2), not pushed.
 
 ## Scope and milestones
 
@@ -33,7 +33,7 @@ Both are AI SDK tools with no server `execute`: the model calls them and the cli
 
 ### Free-text answers
 
-In M1 scope. The model grades each answer as correct, partially correct or incorrect. To keep grading consistent:
+Later, with quizzes. The model grades each answer as correct, partially correct or incorrect. To keep grading consistent:
 
 1. **Key points first.** When the model writes the question, it also writes 2 to 4 key points a good answer must cover. They stay hidden from the card.
 2. **Separate grader call.** Grading runs without the conversation, so the model is not inclined to be generous to the user it has been teaching. It sees only the question, the key points and the answer, at temperature 0, with structured output.
@@ -189,19 +189,23 @@ What to borrow (MIT code can be copied with its license notice):
 - [x] `/api/chat` with persistence
 - [x] `/api/thread` frozen fork with cache marker
 - [x] Claude via `ANTHROPIC_API_KEY`
-- [ ] First commit and push
-- [ ] Local run-through: `supabase start`, migrate, sign in, chat
+- [x] Local run-through: `supabase start`, migrate, sign in, chat
+- [x] Home page: conversation list and New chat
+- [x] Hosted Supabase project created and migrated
+- [ ] Push `feat/scaffold` and open a PR (committed 1651ff2)
+- [ ] Rotate the Anthropic API key (was in a local commit)
 - [ ] Install AI Elements, build chat shell from mocks
 - [ ] Selection listener and "Ask" popover
 - [ ] Highlight painting (CSS Custom Highlight API)
 - [ ] Thread rail positioning and overlap
+- [ ] Thread UI: open a thread, stream its reply, resolve
 
 ### M1 MVP
 - [ ] Learning setup screen and `conversations.goal`
 - [ ] `ask_user` tool and card
 - [ ] Context compaction (rolling summary)
 - [ ] Bring threads into main
-- [ ] Conversation list and titles
+- [ ] Conversation titles
 - [x] Prompt and tool registry scaffold
 - [ ] Tool-call repair
 - [ ] Prompt version hash on messages, prefix snapshot test
@@ -210,6 +214,8 @@ What to borrow (MIT code can be copied with its license notice):
 - [ ] `quiz` tool, card and `quiz_attempts`
 - [ ] Quiz cadence setting and thread-question hints
 - [ ] XP and streak display
+- [ ] Hosted sign-in email: Resend SMTP, then `supabase config push`
+- [ ] Deploy to Vercel (pooler `DATABASE_URL`, production site URL)
 
 ## Context management
 
@@ -259,11 +265,11 @@ Decided 2026-10-10: prompts and tools live in the repo as typed TypeScript, in `
 ## Open questions
 
 - [ ] Compaction trigger: message count (40 down to 20) or a token budget per model?
-- [ ] Summary model: the conversation's own model, or a cheap default the user configures?
+- [ ] Summary model: Sonnet, same as chat, or Haiku for cost?
 - [ ] Digest review: show the digest for editing before attaching, or attach as generated?
 - [ ] Regenerating a main answer orphans its threads. Keep as detached, or delete?
-- [ ] Hosted Supabase project: create now, or stay local until the UI exists?
-- [ ] Quiz cadence: app-driven every N turns (proposed), or let the model decide when?
-- [x] Decided: free-text answers are in M1, graded correct, partially correct or incorrect (see Free-text answers).
-- [ ] Decided: XP exists per session and per user. Still open: how XP is earned and how the two relate.
+- [x] Decided: hosted Supabase project is created and migrated; day-to-day work runs locally on `supabase start`.
+- [ ] Quiz cadence (Later): app-driven every N turns (proposed), or let the model decide when?
+- [x] Decided: free-text grading (correct, partially correct, incorrect) moves to Later with quizzes.
+- [ ] XP (Later): exists per session and per user. Still open: how XP is earned and how the two relate.
 - [ ] Avatars: only a picture, or a tutor persona with its own teaching style? Spend XP to unlock before adding real payments?
