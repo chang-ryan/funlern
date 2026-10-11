@@ -11,30 +11,9 @@ importers:
       '@ai-sdk/anthropic':
         specifier: ^4.0.71
         version: 4.0.71(zod@4.6.5)
-      '@ai-sdk/deepseek':
-        specifier: ^3.0.58
-        version: 3.0.58(zod@4.6.5)
-      '@ai-sdk/google':
-        specifier: ^4.0.87
-        version: 4.0.87(zod@4.6.5)
-      '@ai-sdk/moonshotai':
-        specifier: ^3.0.62
-        version: 3.0.62(zod@4.6.5)
-      '@ai-sdk/openai':
-        specifier: ^4.0.83
-        version: 4.0.83(zod@4.6.5)
-      '@ai-sdk/openai-compatible':
-        specifier: ^3.0.62
-        version: 3.0.62(zod@4.6.5)
       '@ai-sdk/react':
         specifier: ^4.0.129
         version: 4.0.129(react@19.2.8)(zod@4.6.5)
-      '@ai-sdk/zai':
-        specifier: ^3.0.24
-        version: 3.0.24(zod@4.6.5)
-      '@openrouter/ai-sdk-provider':
-        specifier: ^3.1.0
-        version: 3.1.0(ai@7.0.126(zod@4.6.5))(zod@4.6.5)
       '@supabase/ssr':
         specifier: ^0.12.7
         version: 0.12.7(@supabase/supabase-js@2.117.2)
@@ -102,12 +81,18 @@ importers:
       eslint:
         specifier: ^10.11.0
         version: 10.11.0(jiti@2.7.0)
+      eslint-plugin-drizzle:
+        specifier: ^0.2.3
+        version: 0.2.3(eslint@10.11.0(jiti@2.7.0))
       eslint-plugin-react-hooks:
         specifier: ^7.1.1
         version: 7.1.1(eslint@10.11.0(jiti@2.7.0))
       eslint-plugin-react-refresh:
         specifier: ^0.5.7
         version: 0.5.7(eslint@10.11.0(jiti@2.7.0))
+      squawk-cli:
+        specifier: ^2.68.0
+        version: 2.68.0
       tailwindcss:
         specifier: ^4
         version: 4.3.3
@@ -123,44 +108,14 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/deepseek@3.0.58':
-    resolution: {integrity: sha512-tOafL69mHQGJH3g/mu4k0evkP/cRLSHCWe7L9rcVV4b0S1zI2rpWDZbToZO7D4X/uox9baVmgRQ5AoUTeaDs0A==}
-    engines: {node: '>=22'}
-    peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
-
   '@ai-sdk/gateway@4.0.102':
     resolution: {integrity: sha512-kAVldt8D2AVSs7BjBZTRWHcFF71lPH8ouS6/QVlFCnKcUsShjXMdRwW6es5BfxyGewHbXfSirSc8j6efKSkIdA==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/google@4.0.87':
-    resolution: {integrity: sha512-s0tWc+QeSce7O2ZLm+VWSRQy16dGfqEcMIUxEWh+LFvXX3h0TLH8jxCQ2H1qhiBgTta+6A97eHPhBlRFu1xy+g==}
-    engines: {node: '>=22'}
-    peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
-
   '@ai-sdk/mcp@2.0.65':
     resolution: {integrity: sha512-KQPNhSkDa7NBn+NRx+ymUXBz4ItMdD4Xr1nIi5KPpdIIptj71Ja38dmWdonZV9JIZQOL9vSF9X4y1SJKV7pbaw==}
-    engines: {node: '>=22'}
-    peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
-
-  '@ai-sdk/moonshotai@3.0.62':
-    resolution: {integrity: sha512-OuiSS9CyWvLBOFJSs+3dDGQC3oFdHAUhC4otcfwXCJQuGi1GLbk7s0EInYGaqT4o7VKVOjv9VdP4+ihxz2Z+qw==}
-    engines: {node: '>=22'}
-    peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
-
-  '@ai-sdk/openai-compatible@3.0.62':
-    resolution: {integrity: sha512-IAz1xv8zot4KLGa8kN7UfAA6H5+ARzAgAKLsoKxHPBzZuOc2E3ohaELg0x/JR9HVTbMbiftb0dPyCb8cT2KBRg==}
-    engines: {node: '>=22'}
-    peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
-
-  '@ai-sdk/openai@4.0.83':
-    resolution: {integrity: sha512-NgqZVWoya7hfmtLkWyIjX9THbyYMLfxFqpShdAmvMnkoT+R9AZbdULGan8+4BiBWIZ1aHiAsc90l3SL8QU/0+Q==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -180,12 +135,6 @@ packages:
     engines: {node: '>=22'}
     peerDependencies:
       react: ^18 || ~19.0.1 || ~19.1.2 || ^19.2.1
-
-  '@ai-sdk/zai@3.0.24':
-    resolution: {integrity: sha512-YCE0naz8AvsYo/FZ7YSGERwoEjgs2Ps1qJ9StK3J3qjuAccZOFpelBT17YBAGBt/GQPhRD0NqkWN5V9TYjhG+A==}
-    engines: {node: '>=22'}
-    peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
 
   '@alloc/quick-lru@5.3.0':
     resolution: {integrity: sha512-U4+70Pc5ZS9osnCBCE5Jha/ciHM+Yp+CNMNC/7HvYbNRk1Ldd+f7qO65W5qfhu/TCv+/ozljlXXe9Nj8419DMA==}
@@ -1236,13 +1185,6 @@ packages:
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
 
-  '@openrouter/ai-sdk-provider@3.1.0':
-    resolution: {integrity: sha512-BQy1TA9fKrh47s9ivsO6FY5QimN7GUF0i8Qon3pkxQclEgShso0dClpcWn8OIyPLEZZPFaFKgI8TW4S/O0p0Dw==}
-    engines: {node: '>=22'}
-    peerDependencies:
-      ai: ^7.0.0
-      zod: ^3.25.76 || ^4.1.8
-
   '@ota-meshi/ast-token-store@0.3.0':
     resolution: {integrity: sha512-XRO0zi2NIUKq2lUk3T1ecFSld1fMWRKE6naRFGkgkdeosx7IslyUKNv5Dcb5PJTja9tHJoFu0v/7yEpAkrkrTg==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
@@ -1254,6 +1196,45 @@ packages:
   '@sindresorhus/base62@1.0.0':
     resolution: {integrity: sha512-TeheYy0ILzBEI/CO55CP6zJCSdSWeRtGnHy8U8dWSUH4I68iqTsy7HkMktR4xakThc9jotkPQUXT4ITdbV7cHA==}
     engines: {node: '>=18'}
+
+  '@squawk-cli/darwin-arm64@2.68.0':
+    resolution: {integrity: sha512-MDe5/uRqkoBvU4MVzPwRJZHoRxZ78vNhyYeoy/0mZKhZz64xH6zQozoJBM7W9pspHGjBQ2u+tEVf30gurBGS9A==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@squawk-cli/darwin-x64@2.68.0':
+    resolution: {integrity: sha512-NTuclGY2a/9H6jfGbxot401sdQH3su4MbQeBNrXY/EeH3CUKQtOXSyI6vMvR4wQut6lc/uU3TpofK2CVM8YpEA==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@squawk-cli/linux-arm64-musl@2.68.0':
+    resolution: {integrity: sha512-JbvhsK9WxLWN0eDUO8skclUKhn9qIcYPmAakiFrmnAKqvhCzwzBvVnQX1E5Y+BduaFJpap36eJq/4gEzVSHJ/g==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@squawk-cli/linux-arm64@2.68.0':
+    resolution: {integrity: sha512-//HDEdhO4QSFY8VPvPfYBEcSgXaa4wyycyLSvdvJ9uC03REGy+0UvYZyGZy1qOwnoIoVr8aWukZ9b68Lsz0mtg==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@squawk-cli/linux-x64-musl@2.68.0':
+    resolution: {integrity: sha512-kBwXlCFhIRNaJaLN+gtI9pi4zS6p1QgVvD2Gf5yyQ3Z3tv5dzCZ0FcMETcxwE2CW+2Wa1lnevy0OUWktc0+Btw==}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@squawk-cli/linux-x64@2.68.0':
+    resolution: {integrity: sha512-by8mRyKmVCrJ42fV3/wcAD8KdsupMHWIT/9ubmwxKHrl9TDetDgOtOo4xQKfND5n2RH5yBBsjgW1ailOgSl3QQ==}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@squawk-cli/win32-x64@2.68.0':
+    resolution: {integrity: sha512-++jd0uZ1UatYzdBz4wao8Ip525xjDTbvx+pJK+A21yeKfXZQTaB0RJXsIae7cofSFOgRAXvwVzlzK8PWzlpjsg==}
+    cpu: [x64]
+    os: [win32]
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
@@ -1928,6 +1909,11 @@ packages:
       '@typescript-eslint/typescript-estree': '*'
       '@typescript-eslint/utils': '*'
       eslint: '*'
+
+  eslint-plugin-drizzle@0.2.3:
+    resolution: {integrity: sha512-BO+ymHo33IUNoJlC0rbd7HP9EwwpW4VIp49R/tWQF/d2E1K2kgTf0tCXT0v9MSiBr6gGR1LtPwMLapTKEWSg9A==}
+    peerDependencies:
+      eslint: '>=8.0.0'
 
   eslint-plugin-es-x@7.8.0:
     resolution: {integrity: sha512-7Ds8+wAAoV3T+LAKeu39Y5BzXCrGKrcISfgKEqTS4BDN8SFEDQd0S43jiQ8vIa3wUKD07qitZdfzlenSi8/0qQ==}
@@ -3012,6 +2998,10 @@ packages:
   spdx-license-ids@3.0.24:
     resolution: {integrity: sha512-cLS9TtWkIQFyLkJ3/5aFQAOHOSKTlOs/7WDut/XPSdjom1fJhUdkepeJAKXa9Y05+FabHd0sti+Et559vDtkpQ==}
 
+  squawk-cli@2.68.0:
+    resolution: {integrity: sha512-hH+pvEPxPutJ1zDDP1DOY5sJv7wAngPAEW33Flta18yB1+/nLifbRTYpMvHHXtNneJIPZHHo941sc/mPzP8wQw==}
+    hasBin: true
+
   streamdown@2.7.0:
     resolution: {integrity: sha512-SHYTCveHpRJfcIC8r+5EANczK21R0iNYo4i7wNaLeLeQjEnaVk4xMFhgV4E/mix69BpFSBui1NOESEXKlZfReA==}
     peerDependencies:
@@ -3263,23 +3253,11 @@ snapshots:
       '@ai-sdk/provider-utils': 5.0.53(zod@4.6.5)
       zod: 4.6.5
 
-  '@ai-sdk/deepseek@3.0.58(zod@4.6.5)':
-    dependencies:
-      '@ai-sdk/provider': 4.0.21
-      '@ai-sdk/provider-utils': 5.0.53(zod@4.6.5)
-      zod: 4.6.5
-
   '@ai-sdk/gateway@4.0.102(zod@4.6.5)':
     dependencies:
       '@ai-sdk/provider': 4.0.21
       '@ai-sdk/provider-utils': 5.0.53(zod@4.6.5)
       '@vercel/oidc': 3.2.0
-      zod: 4.6.5
-
-  '@ai-sdk/google@4.0.87(zod@4.6.5)':
-    dependencies:
-      '@ai-sdk/provider': 4.0.21
-      '@ai-sdk/provider-utils': 5.0.53(zod@4.6.5)
       zod: 4.6.5
 
   '@ai-sdk/mcp@2.0.65(zod@4.6.5)':
@@ -3288,24 +3266,6 @@ snapshots:
       '@ai-sdk/provider-utils': 5.0.53(zod@4.6.5)
       cross-spawn: 7.0.6
       pkce-challenge: 5.0.1
-      zod: 4.6.5
-
-  '@ai-sdk/moonshotai@3.0.62(zod@4.6.5)':
-    dependencies:
-      '@ai-sdk/provider': 4.0.21
-      '@ai-sdk/provider-utils': 5.0.53(zod@4.6.5)
-      zod: 4.6.5
-
-  '@ai-sdk/openai-compatible@3.0.62(zod@4.6.5)':
-    dependencies:
-      '@ai-sdk/provider': 4.0.21
-      '@ai-sdk/provider-utils': 5.0.53(zod@4.6.5)
-      zod: 4.6.5
-
-  '@ai-sdk/openai@4.0.83(zod@4.6.5)':
-    dependencies:
-      '@ai-sdk/provider': 4.0.21
-      '@ai-sdk/provider-utils': 5.0.53(zod@4.6.5)
       zod: 4.6.5
 
   '@ai-sdk/provider-utils@5.0.53(zod@4.6.5)':
@@ -3332,13 +3292,6 @@ snapshots:
       throttleit: 2.1.0
     transitivePeerDependencies:
       - zod
-
-  '@ai-sdk/zai@3.0.24(zod@4.6.5)':
-    dependencies:
-      '@ai-sdk/openai-compatible': 3.0.62(zod@4.6.5)
-      '@ai-sdk/provider': 4.0.21
-      '@ai-sdk/provider-utils': 5.0.53(zod@4.6.5)
-      zod: 4.6.5
 
   '@alloc/quick-lru@5.3.0': {}
 
@@ -4147,16 +4100,32 @@ snapshots:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.3
 
-  '@openrouter/ai-sdk-provider@3.1.0(ai@7.0.126(zod@4.6.5))(zod@4.6.5)':
-    dependencies:
-      ai: 7.0.126(zod@4.6.5)
-      zod: 4.6.5
-
   '@ota-meshi/ast-token-store@0.3.0': {}
 
   '@pkgr/core@0.3.6': {}
 
   '@sindresorhus/base62@1.0.0': {}
+
+  '@squawk-cli/darwin-arm64@2.68.0':
+    optional: true
+
+  '@squawk-cli/darwin-x64@2.68.0':
+    optional: true
+
+  '@squawk-cli/linux-arm64-musl@2.68.0':
+    optional: true
+
+  '@squawk-cli/linux-arm64@2.68.0':
+    optional: true
+
+  '@squawk-cli/linux-x64-musl@2.68.0':
+    optional: true
+
+  '@squawk-cli/linux-x64@2.68.0':
+    optional: true
+
+  '@squawk-cli/win32-x64@2.68.0':
+    optional: true
 
   '@standard-schema/spec@1.1.0': {}
 
@@ -4757,6 +4726,10 @@ snapshots:
       '@es-joy/jsdoccomment': 0.92.0
       '@typescript-eslint/typescript-estree': 8.71.0(typescript@5.9.3)
       '@typescript-eslint/utils': 8.71.0(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3)
+      eslint: 10.11.0(jiti@2.7.0)
+
+  eslint-plugin-drizzle@0.2.3(eslint@10.11.0(jiti@2.7.0)):
+    dependencies:
       eslint: 10.11.0(jiti@2.7.0)
 
   eslint-plugin-es-x@7.8.0(eslint@10.11.0(jiti@2.7.0)):
@@ -6225,6 +6198,16 @@ snapshots:
       spdx-license-ids: 3.0.24
 
   spdx-license-ids@3.0.24: {}
+
+  squawk-cli@2.68.0:
+    optionalDependencies:
+      '@squawk-cli/darwin-arm64': 2.68.0
+      '@squawk-cli/darwin-x64': 2.68.0
+      '@squawk-cli/linux-arm64': 2.68.0
+      '@squawk-cli/linux-arm64-musl': 2.68.0
+      '@squawk-cli/linux-x64': 2.68.0
+      '@squawk-cli/linux-x64-musl': 2.68.0
+      '@squawk-cli/win32-x64': 2.68.0
 
   streamdown@2.7.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
     dependencies:

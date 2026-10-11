@@ -3,8 +3,8 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 
 const PUBLIC_PATHS = ['/login', '/auth']
-// Dev UI preview: `/` and its unpersisted chat route skip auth (and Supabase) entirely.
-const OPEN_PATHS = ['/', '/api/scratch']
+// Dev UI preview: `/scratch` and its unpersisted chat route skip auth (and Supabase) entirely.
+const OPEN_PATHS = ['/scratch', '/api/scratch']
 
 export async function proxy(request: NextRequest) {
   if (OPEN_PATHS.includes(request.nextUrl.pathname))
@@ -41,5 +41,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|manifest\\.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }

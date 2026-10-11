@@ -1,7 +1,7 @@
 import type { UIMessage } from 'ai'
 import { convertToModelMessages, createUIMessageStreamResponse, streamText, toUIMessageStream, validateUIMessages } from 'ai'
-import { SYSTEM_PROMPT } from '@/lib/ai/prompts'
-import { resolveModel } from '@/lib/ai/resolve-model'
+import { model } from '@/lib/ai/model'
+import { SYSTEM_PROMPT } from '@/lib/ai/prompts/system'
 import { getConversation, getMessages, saveMessages } from '@/lib/db/queries'
 import { getUserId } from '@/lib/supabase/server'
 
@@ -16,7 +16,6 @@ export async function POST(req: Request) {
     return new Response('Not found', { status: 404 })
 
   const messages = await validateUIMessages({ messages: [...await getMessages(id), message] })
-  const { model } = await resolveModel(userId, convo.modelConfigId)
 
   const result = streamText({
     model,

@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791688924555,
+      "tag": "20261011032204_profiles",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791688926090,
+      "tag": "20261011032206_conversations",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791688927618,
+      "tag": "20261011032207_threads",
+      "breakpoints": true
+    }
+  ]
+}

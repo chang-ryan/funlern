@@ -6,7 +6,7 @@ Shared copy: https://claude.ai/code/artifact/c40870de-a8d2-482f-8c9c-b1bdfd36cc1
 
 funlern is an interactive learning app, not a general chat clone. You start by saying what you want to learn, set a minimal goal, then work through it: highlight any passage to ask about it in a side thread, answer clarifying questions and pop quizzes as cards, and earn progress as you go. The first user is me, learning faster; it doubles as a showcase.
 
-Status: the backend is scaffolded and builds (auth, schema, chat and thread routes, bring-your-own model). The UI is unstyled stubs, waiting on mocks. Nothing is committed yet.
+Status: the backend is scaffolded and builds (auth, schema, chat and thread routes, Claude only). The UI is unstyled stubs, waiting on mocks. Nothing is committed yet.
 
 ## Scope and milestones
 
@@ -14,13 +14,14 @@ Three milestones: the POC proves side threads, the MVP adds the learning loop, a
 
 | Milestone | In scope | Done when |
 | --- | --- | --- |
-| M0 POC | Highlight to ask, side-thread rail, BYO models | I can pick apart one long answer with three or more threads |
-| M1 MVP | Learning setup, ask-user cards, pop quizzes, XP and streak, bring threads into main, context compaction | I use it for a week instead of Claude chat for one topic |
-| Later | Spaced review of missed concepts, concept mastery map, shareable sessions for the showcase | Picked after M1 |
+| M0 POC | Highlight to ask, side-thread rail, Claude only | I can pick apart one long answer with three or more threads |
+| M1 MVP | Learning setup, ask-user cards, bring threads into main, context compaction | I use it for a week instead of Claude chat for one topic |
+| Later | Pop quizzes, XP and streak, free-text grading, spaced review of missed concepts, concept mastery map, shareable sessions for the showcase, selectable tutor avatars (unlocked with XP first, paid later), bring-your-own models (DeepSeek, Kimi, GLM, OpenRouter) | Picked after M1 |
+| Pinned | Web search tool with cited sources (see Web search) | Scheduled once a topic I study needs facts newer than the model's cutoff |
 
 ### Learning setup
 
-A new session opens on "What do you want to learn?" plus four optional fields: goal (what you want to be able to do), current level (new, some, comfortable), depth (overview or deep dive), and quiz frequency (off, occasional, frequent). Stored as `goal` JSON on `conversation`. The model can refine it with an ask-user card in its first turn.
+A new session opens on "What do you want to learn?" plus four optional fields: goal (what you want to be able to do), current level (new, some, comfortable), depth (overview or deep dive), and quiz frequency (off, occasional, frequent). Stored as `goal` JSON on `conversations`. The model can refine it with an ask-user card in its first turn.
 
 ### Ask-user cards and quizzes
 
@@ -47,13 +48,85 @@ The app sets the cadence; the model writes the quiz. With "occasional", every 4t
 
 ### Progress
 
-XP comes only from quizzes: 10 for correct first try, 3 for correct after a miss. A streak counts consecutive days with at least one quiz answered. Both are derived from `quiz_attempt`, so there is no stats table to keep in sync. Per-concept accuracy from the same table drives "review this" later.
+XP comes only from quizzes: 10 for correct first try, 3 for correct after a miss. A streak counts consecutive days with at least one quiz answered. Both are derived from `quiz_attempts`, so there is no stats table to keep in sync. Per-concept accuracy from the same table drives "review this" later.
 
 ### What this changes in the build
 
-- **Schema:** `conversation.goal` (JSON); new `quiz_attempt` (id, conversation id, message id, tool call id, concept, correct, attempts, answered at).
+- **Schema:** `conversations.goal` (JSON); new `quiz_attempts` (id, conversation id, message id, tool call id, concept, correct, attempts, answered at).
 - **Threads must send the same tool definitions as main.** Tools sit at the front of the cached prefix, so a thread without them misses the cache. Threads set `toolChoice: "none"` instead.
-- **Open-weight tool calling varies.** DeepSeek, Kimi and GLM support it; some OpenRouter models do not. Mark each model config `supportsTools`; without it, sessions run with no cards or quizzes.
+
+### Web search (pinned)
+
+Pinned, not scheduled. The tutor gets one `web_search` tool that we run ourselves, so it works with every model, including DeepSeek, Kimi and GLM. Provider-built search (Anthropic, OpenAI) only works with that vendor's models.
+
+- **Backend:** Tavily, 1,000 free searches a month, then about $0.008 each. Google Custom Search is closed to new signups and shuts down on 2027-01-01.
+- **Tool:** input `{ query }`; returns the top 5 results (title, URL, trimmed content). The server holds the key; bring-your-own search key later.
+- **Limits:** a few searches per turn, a daily quota per user, results cached by query in Postgres.
+- **Citations:** results render as source chips under the tutor message.
+- **Context:** compaction drops old search results and keeps only what was cited.
+- **When to search:** the model alone misses confident errors on niche facts, so we steer it: today's date and the model's cutoff in the system prompt, a search eagerness setting per topic, one grounding search when planning a lesson, and a "check this" button.
+- **Side threads:** they run with `toolChoice: "none"` today, so they cannot search unless we change that.
+
+## Data model
+
+Five tables are built in code with a generated migration, not yet applied. Table names are plural to match Supabase's `auth.users`. `profiles` is our side of each account: one row per `auth.users` row, created by a signup trigger. Every `user_id` references `profiles`, so deleting a user cascades through all their data. M1 adds two tables and five columns (marked `M1`).
+
+```mermaid
+erDiagram
+  AUTH_USERS ||--|| PROFILES : "has"
+  PROFILES ||--o{ CONVERSATIONS : owns
+  CONVERSATIONS ||--o{ MESSAGES : has
+  CONVERSATIONS ||--o{ THREADS : has
+  MESSAGES ||--o{ THREADS : "anchors"
+  THREADS ||--o{ THREAD_MESSAGES : has
+  CONVERSATIONS ||--o{ CONTEXT_SUMMARIES : "M1"
+  CONTEXT_SUMMARIES |o--o{ THREADS : "M1 forked with"
+
+  PROFILES {
+    uuid id PK "= auth.users.id"
+    text display_name
+    timestamptz updated_at
+  }
+  CONVERSATIONS {
+    uuid id PK
+    uuid user_id FK
+    text title
+    jsonb goal "M1"
+  }
+  MESSAGES {
+    text id PK "AI SDK message id"
+    uuid conversation_id FK
+    role role
+    jsonb parts
+    int index
+  }
+  THREADS {
+    uuid id PK
+    uuid conversation_id FK
+    text anchor_message_id FK
+    jsonb anchor "quote, prefix, suffix"
+    int snapshot_index
+    thread_status status
+    text digest "M1"
+    timestamptz merged_at "M1"
+    uuid summary_id FK "M1"
+  }
+  THREAD_MESSAGES {
+    text id PK
+    uuid thread_id FK
+    role role
+    jsonb parts
+    int index
+  }
+  CONTEXT_SUMMARIES {
+    uuid id PK "M1"
+    uuid conversation_id FK
+    int through_index
+    text text
+  }
+```
+
+Threads point at both the conversation and the exact message they quote; `snapshot_index` marks where the forked context stops. In M1, `threads.summary_id` records which rolling summary was active when the thread was forked. XP and streaks are derived from `quiz_attempts`.
 
 ## Decisions
 
@@ -64,10 +137,15 @@ XP comes only from quizzes: 10 for correct first try, 3 for correct after a miss
 | Stack | Next.js 16, Tailwind v4, AI SDK 7, Drizzle | Current versions, all typed |
 | Auth + DB | Supabase: email OTP or magic link, Postgres | One service for both |
 | Data access | Drizzle as table owner; RLS on with no policies | Blocks the public Data API; every query filters by user id |
-| Models | Bring your own: Anthropic, OpenAI, Google, DeepSeek, Kimi, GLM, OpenRouter, any OpenAI-compatible endpoint | Keys encrypted with AES-GCM, never sent to the client |
+| Models | Claude only for the POC, from `ANTHROPIC_API_KEY`; bring-your-own models later | One provider key to manage; the removed BYO code is in commit e0f061b |
 | Thread context | Frozen fork at the snapshot, same model as main | Shared prefix is a prompt cache hit |
 | Thread instructions | In the user turn, not the system prompt | Keeps the cached prefix byte-identical |
+| Accounts | Our own `profiles` table keyed to `auth.users`, filled by a signup trigger; table names plural | We own user data like names; plural matches Supabase's `auth.users` |
 | Lint | @antfu/eslint-config | `process` stays global for Next env inlining |
+| Prompts | TypeScript modules in the repo, versioned by git; no hosted prompt manager | Only developers edit them; typed arguments and diffs come free |
+| Migrations | Drizzle generates into `supabase/migrations`; the Supabase CLI applies them. One migration per task, checked by `drizzle-kit check` and squawk | One runner that knows the auth schema; `db reset` and `db push` work locally and on hosted |
+| Local dev | `supabase start` in Docker on ports 553xx; hosted values in `.env.remote` | Real Auth and Mailpit locally; 553xx avoids another local Supabase project on the defaults |
+| Tools | Native tool calling via AI SDK `tool()` with zod schemas; one registry, no MCP | Every supported provider has tool calling; zod validates every call |
 
 ## Framework comparison
 
@@ -110,25 +188,28 @@ What to borrow (MIT code can be copied with its license notice):
 - [x] Schema, RLS, first migration
 - [x] `/api/chat` with persistence
 - [x] `/api/thread` frozen fork with cache marker
-- [x] BYO models incl. DeepSeek, Kimi, GLM, OpenRouter
+- [x] Claude via `ANTHROPIC_API_KEY`
 - [ ] First commit and push
 - [ ] Local run-through: `supabase start`, migrate, sign in, chat
-- [ ] Model settings page (wraps `saveModelConfig`)
 - [ ] Install AI Elements, build chat shell from mocks
 - [ ] Selection listener and "Ask" popover
 - [ ] Highlight painting (CSS Custom Highlight API)
 - [ ] Thread rail positioning and overlap
 
 ### M1 MVP
-- [ ] Learning setup screen and `conversation.goal`
+- [ ] Learning setup screen and `conversations.goal`
 - [ ] `ask_user` tool and card
-- [ ] `quiz` tool, card and `quiz_attempt`
-- [ ] Quiz cadence setting and thread-question hints
-- [ ] XP and streak display
-- [ ] `supportsTools` flag on model configs
 - [ ] Context compaction (rolling summary)
 - [ ] Bring threads into main
 - [ ] Conversation list and titles
+- [x] Prompt and tool registry scaffold
+- [ ] Tool-call repair
+- [ ] Prompt version hash on messages, prefix snapshot test
+
+### Later
+- [ ] `quiz` tool, card and `quiz_attempts`
+- [ ] Quiz cadence setting and thread-question hints
+- [ ] XP and streak display
 
 ## Context management
 
@@ -138,7 +219,7 @@ Proposal: keep the last 20 messages verbatim and fold everything older into one 
 
 1. **Trigger in batches.** Compact when the unsummarized tail passes 40 messages (or a token budget), back down to 20. The prefix stays byte-identical between compactions, so the prompt cache keeps hitting.
 2. **What the model sees:** system prompt, then the summary as the first user message, then the messages after the summary point.
-3. **Storage:** `context_summary` table (id, conversation id, `through_index`, text, created time). Latest row is active; old rows stay so forks can replay them.
+3. **Storage:** `context_summaries` table (id, conversation id, `through_index`, text, created time). Latest row is active; old rows stay so forks can replay them.
 4. **When it runs:** after the response is saved (`onEnd`), so no added latency. A cheaper model is fine here.
 5. **Threads:** each thread stores the summary id active at its snapshot, so the fork replays exactly what main saw.
 6. **UI:** full history stays visible; at most a divider marks where the summary starts.
@@ -156,7 +237,24 @@ In scope: a manual "Bring into main" button per thread. It condenses the thread 
 5. **Compaction:** digests are ordinary message content; the rolling summary absorbs them.
 6. **Thread state:** a merged thread shows as merged and can stay open; merging again sends a new digest.
 
-Schema change: `thread` gets `digest text` and `merged_at timestamptz`, plus the new `context_summary` table. Automatic merging stays out of scope.
+Schema change: `threads` gets `digest text` and `merged_at timestamptz`, plus the new `context_summaries` table. Automatic merging stays out of scope.
+
+## Prompts and tools
+
+Decided 2026-10-10: prompts and tools live in the repo as typed TypeScript, in `lib/ai/prompts/` and `lib/ai/tools/`. Scaffolded; the tools are not wired into the routes until the cards exist.
+
+| Kind | Where it goes | Changes | Examples |
+| --- | --- | --- | --- |
+| System prompt | Start of the cached prefix | Once per conversation | Tutor persona, teaching style, learning goal, what injected tags mean |
+| Tool definitions | Cached prefix | Only on deploy | `ask_user`, `quiz`, `web_search` (pinned) |
+| Per-turn additions | Inside the user message | Every turn | Thread framing, quiz nudge, thread digests, rolling summary, today's date |
+| Task prompts | Their own call | Per task | Grader, summarizer, digest, title, lesson planner, each with a zod output schema |
+
+- **Layout:** `prompts/system.ts`, `prompts/turn.ts`, `prompts/tasks/*`; `tools/schemas.ts` holds definitions with no server code so client cards can import them, and `tools/index.ts` is the registry plus `FunlernUIMessage` types.
+- **Templates:** plain functions with typed arguments, no `{{ }}` engine. Injected content is wrapped in tags the system prompt explains, with user text escaped.
+- **Same tool set on every request.** Threads keep all tools and set `toolChoice: "none"`, so the prefix stays cached.
+- **Valid tool JSON:** zod validates every call; `strict: true` where the provider supports it; `repairToolCall` re-asks once, then the error goes back as the tool result; flat schemas with enums and a `.describe()` per field.
+- **Traceability:** a hash of the system prompt and tool definitions goes in each assistant message's metadata, and a snapshot test fails if the prefix changes by accident.
 
 ## Open questions
 
@@ -168,3 +266,4 @@ Schema change: `thread` gets `digest text` and `merged_at timestamptz`, plus the
 - [ ] Quiz cadence: app-driven every N turns (proposed), or let the model decide when?
 - [x] Decided: free-text answers are in M1, graded correct, partially correct or incorrect (see Free-text answers).
 - [ ] Decided: XP exists per session and per user. Still open: how XP is earned and how the two relate.
+- [ ] Avatars: only a picture, or a tutor persona with its own teaching style? Spend XP to unlock before adding real payments?

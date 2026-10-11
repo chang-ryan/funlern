@@ -9,20 +9,17 @@
     "start": "next start",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:generate": "drizzle-kit generate --name",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:migrate": "supabase migration up",
+    "db:reset": "supabase db reset",
+    "db:push": "supabase db push",
+    "db:check": "drizzle-kit check && squawk supabase/migrations/*.sql"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.71",
-    "@ai-sdk/deepseek": "^3.0.58",
-    "@ai-sdk/google": "^4.0.87",
-    "@ai-sdk/moonshotai": "^3.0.62",
-    "@ai-sdk/openai": "^4.0.83",
-    "@ai-sdk/openai-compatible": "^3.0.62",
     "@ai-sdk/react": "^4.0.129",
-    "@ai-sdk/zai": "^3.0.24",
-    "@openrouter/ai-sdk-provider": "^3.1.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
     "ai": "^7.0.126",
@@ -47,8 +44,10 @@
     "dotenv": "^18.0.5",
     "drizzle-kit": "^0.31.11",
     "eslint": "^10.11.0",
+    "eslint-plugin-drizzle": "^0.2.3",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
+    "squawk-cli": "^2.68.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

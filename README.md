@@ -8,24 +8,40 @@ Next.js (App Router) · Tailwind v4 · Vercel AI SDK · Supabase (auth via email
 
 ## Setup
 
+Needs Docker running (`supabase start` runs Postgres, Auth, Studio and Mailpit in containers).
+
 ```bash
 pnpm install
-cp .env.example .env.local   # also copy DATABASE_URL into .env for drizzle-kit
-supabase start               # local Supabase; prints URL + publishable key
-pnpm db:migrate
+cp .env.example .env.local   # then fill in ANTHROPIC_API_KEY and the publishable key
+pnpm db:start                # local Supabase on ports 553xx; applies supabase/migrations
 pnpm dev
 ```
 
-Local auth emails go to Mailpit at http://127.0.0.1:54324.
+| Local service | URL |
+| --- | --- |
+| App | http://localhost:3000 |
+| Studio | http://127.0.0.1:55323 |
+| Mailpit (sign-in codes) | http://127.0.0.1:55324 |
 
-For hosted Supabase, set the Magic Link email template to include `{{ .Token }}` and link to
-`{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email` (see `supabase/templates/magic_link.html`).
+## Database changes
+
+Drizzle owns the schema; the Supabase CLI applies migrations.
+
+1. Edit `lib/db/schema.ts`. Column names come from `casing: 'snake_case'`, so `displayName: text()` is `display_name`.
+2. `pnpm db:generate <scope>` writes `supabase/migrations/<timestamp>_<scope>.sql`. Keep one migration per task. Hand-written SQL (functions, triggers) goes in the same file.
+3. `pnpm db:check` runs `drizzle-kit check` (snapshots consistent) and squawk (no locking or unsafe changes).
+4. `pnpm db:migrate` applies it locally (`pnpm db:reset` rebuilds from scratch).
+5. `pnpm db:push` applies pending migrations to the linked hosted project.
+
+Never edit a migration that has been applied anywhere; add a new one.
+
+Hosted connection values live in `.env.remote` (gitignored). Auth settings and the email template live in `supabase/config.toml`; push them with `supabase config push`.
 
 ## Layout
 
 - `proxy.ts`: refreshes the Supabase session and redirects signed-out users to `/login`.
 - `lib/supabase/`: server and browser clients. `getUserId()` is the authz check for routes and actions.
-- `lib/db/schema.ts`: `model_config`, `conversation`, `message`, `thread`, `thread_message`.
-- `lib/ai/resolve-model.ts`: builds the user's model (Anthropic, OpenAI, Google, OpenAI-compatible) from an encrypted config.
+- `lib/db/schema.ts`: `profiles`, `conversations`, `messages`, `threads`, `thread_messages`.
+- `lib/ai/`: `model.ts` (Claude), `prompts/`, `tools/`, `cache.ts`.
 
 Drizzle connects as the database owner and bypasses RLS, so every query must filter by user id.

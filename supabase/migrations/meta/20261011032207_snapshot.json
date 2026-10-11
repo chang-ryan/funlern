@@ -1,11 +1,11 @@
 {
-  "id": "b70091ca-7696-4324-92e6-304e1668e9b1",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "356530dd-048b-4f2b-bb62-e58f2eb09168",
+  "prevId": "889668a7-0f71-4cc9-bccb-9c52677198cb",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.conversation": {
-      "name": "conversation",
+    "public.conversations": {
+      "name": "conversations",
       "schema": "",
       "columns": {
         "id": {
@@ -27,12 +27,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "model_config_id": {
-          "name": "model_config_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -43,17 +37,17 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "conversation_model_config_id_model_config_id_fk": {
-          "name": "conversation_model_config_id_model_config_id_fk",
-          "tableFrom": "conversation",
-          "tableTo": "model_config",
+        "conversations_user_id_profiles_id_fk": {
+          "name": "conversations_user_id_profiles_id_fk",
+          "tableFrom": "conversations",
+          "tableTo": "profiles",
           "columnsFrom": [
-            "model_config_id"
+            "user_id"
           ],
           "columnsTo": [
             "id"
           ],
-          "onDelete": "set null",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -63,8 +57,8 @@
       "checkConstraints": {},
       "isRLSEnabled": true
     },
-    "public.message": {
-      "name": "message",
+    "public.messages": {
+      "name": "messages",
       "schema": "",
       "columns": {
         "id": {
@@ -107,8 +101,8 @@
         }
       },
       "indexes": {
-        "message_conversation_idx": {
-          "name": "message_conversation_idx",
+        "messages_conversation_idx": {
+          "name": "messages_conversation_idx",
           "columns": [
             {
               "expression": "conversation_id",
@@ -130,10 +124,10 @@
         }
       },
       "foreignKeys": {
-        "message_conversation_id_conversation_id_fk": {
-          "name": "message_conversation_id_conversation_id_fk",
-          "tableFrom": "message",
-          "tableTo": "conversation",
+        "messages_conversation_id_conversations_id_fk": {
+          "name": "messages_conversation_id_conversations_id_fk",
+          "tableFrom": "messages",
+          "tableTo": "conversations",
           "columnsFrom": [
             "conversation_id"
           ],
@@ -150,59 +144,94 @@
       "checkConstraints": {},
       "isRLSEnabled": true
     },
-    "public.model_config": {
-      "name": "model_config",
+    "public.profiles": {
+      "name": "profiles",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
           "type": "uuid",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
-        "user_id": {
-          "name": "user_id",
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "profiles_id_users_id_fk": {
+          "name": "profiles_id_users_id_fk",
+          "tableFrom": "profiles",
+          "tableTo": "users",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.thread_messages": {
+      "name": "thread_messages",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "thread_id": {
+          "name": "thread_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "label": {
-          "name": "label",
-          "type": "text",
+        "role": {
+          "name": "role",
+          "type": "role",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
-        "provider": {
-          "name": "provider",
-          "type": "text",
+        "parts": {
+          "name": "parts",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": true
         },
-        "model_id": {
-          "name": "model_id",
-          "type": "text",
+        "index": {
+          "name": "index",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
-        },
-        "encrypted_key": {
-          "name": "encrypted_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "base_url": {
-          "name": "base_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_default": {
-          "name": "is_default",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
         },
         "created_at": {
           "name": "created_at",
@@ -212,16 +241,52 @@
           "default": "now()"
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
+      "indexes": {
+        "thread_messages_thread_idx": {
+          "name": "thread_messages_thread_idx",
+          "columns": [
+            {
+              "expression": "thread_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "index",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "thread_messages_thread_id_threads_id_fk": {
+          "name": "thread_messages_thread_id_threads_id_fk",
+          "tableFrom": "thread_messages",
+          "tableTo": "threads",
+          "columnsFrom": [
+            "thread_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": true
     },
-    "public.thread": {
-      "name": "thread",
+    "public.threads": {
+      "name": "threads",
       "schema": "",
       "columns": {
         "id": {
@@ -272,8 +337,8 @@
         }
       },
       "indexes": {
-        "thread_conversation_idx": {
-          "name": "thread_conversation_idx",
+        "threads_conversation_idx": {
+          "name": "threads_conversation_idx",
           "columns": [
             {
               "expression": "conversation_id",
@@ -289,10 +354,10 @@
         }
       },
       "foreignKeys": {
-        "thread_conversation_id_conversation_id_fk": {
-          "name": "thread_conversation_id_conversation_id_fk",
-          "tableFrom": "thread",
-          "tableTo": "conversation",
+        "threads_conversation_id_conversations_id_fk": {
+          "name": "threads_conversation_id_conversations_id_fk",
+          "tableFrom": "threads",
+          "tableTo": "conversations",
           "columnsFrom": [
             "conversation_id"
           ],
@@ -302,99 +367,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "thread_anchor_message_id_message_id_fk": {
-          "name": "thread_anchor_message_id_message_id_fk",
-          "tableFrom": "thread",
-          "tableTo": "message",
+        "threads_anchor_message_id_messages_id_fk": {
+          "name": "threads_anchor_message_id_messages_id_fk",
+          "tableFrom": "threads",
+          "tableTo": "messages",
           "columnsFrom": [
             "anchor_message_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": true
-    },
-    "public.thread_message": {
-      "name": "thread_message",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "thread_id": {
-          "name": "thread_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "role": {
-          "name": "role",
-          "type": "role",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "parts": {
-          "name": "parts",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "index": {
-          "name": "index",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "thread_message_thread_idx": {
-          "name": "thread_message_thread_idx",
-          "columns": [
-            {
-              "expression": "thread_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "index",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "thread_message_thread_id_thread_id_fk": {
-          "name": "thread_message_thread_id_thread_id_fk",
-          "tableFrom": "thread_message",
-          "tableTo": "thread",
-          "columnsFrom": [
-            "thread_id"
           ],
           "columnsTo": [
             "id"

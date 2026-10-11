@@ -18,7 +18,7 @@ const SEED: UIMessage[] = [
   },
 ]
 
-/** Unpersisted chat for trying the UI. Talks to /api/scratch (dev model from env). */
+/** Unpersisted chat for trying the UI. Talks to /api/scratch. */
 export function ScratchChat() {
   const { messages, sendMessage, status, error, stop, setMessages } = useChat({
     messages: SEED,

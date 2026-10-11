@@ -1,5 +1,6 @@
 import type { UIMessage } from 'ai'
 import type { ReactNode } from 'react'
+import Image from 'next/image'
 import { Streamdown } from 'streamdown'
 import { textOf } from '@/lib/messages'
 
@@ -21,9 +22,7 @@ export function Message({ message, streaming, children }: {
 
   return (
     <div className="flex items-start gap-2.5">
-      <div aria-hidden className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-xs font-medium text-muted">
-        T
-      </div>
+      <TutorAvatar />
       <div className="min-w-0 max-w-[90%] rounded-2xl rounded-tl-md bg-tutor px-4 py-2.5 sm:max-w-[80%]">
         {children ?? (
           <Streamdown className="text-[15px] leading-relaxed" isAnimating={streaming}>
@@ -38,12 +37,24 @@ export function Message({ message, streaming, children }: {
 export function Typing() {
   return (
     <div className="flex items-start gap-2.5" aria-label="Tutor is typing">
-      <div aria-hidden className="mt-1 size-7 shrink-0 rounded-full border border-border bg-surface" />
+      <TutorAvatar />
       <div className="flex gap-1 rounded-2xl rounded-tl-md bg-tutor px-4 py-3.5">
         {[0, 150, 300].map(d => (
           <span key={d} className="size-1.5 animate-bounce rounded-full bg-muted" style={{ animationDelay: `${d}ms` }} />
         ))}
       </div>
     </div>
+  )
+}
+
+function TutorAvatar() {
+  return (
+    <Image
+      src="/avatars/tutor.png"
+      alt="Tutor"
+      width={32}
+      height={32}
+      className="mt-0.5 size-8 shrink-0 rounded-full border border-border object-cover"
+    />
   )
 }
