@@ -1,26 +1,47 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+@import 'streamdown/styles.css';
 
+@source "../node_modules/streamdown/dist/*.js";
+
+/* Neutral placeholder palette until mocks land. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafaf9;
+  --foreground: #1c1917;
+  --surface: #ffffff;
+  --muted: #78716c;
+  --border: #e7e5e4;
+  --tutor: #f5f5f4;
+  --student: #292524;
+  --student-foreground: #fafaf9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0c0a09;
+    --foreground: #e7e5e4;
+    --surface: #1c1917;
+    --muted: #a8a29e;
+    --border: #292524;
+    --tutor: #1c1917;
+    --student: #e7e5e4;
+    --student-foreground: #1c1917;
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-tutor: var(--tutor);
+  --color-student: var(--student);
+  --color-student-foreground: var(--student-foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }

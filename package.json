@@ -2,26 +2,54 @@
   "name": "funlern",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@11.0.8",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.71",
+    "@ai-sdk/deepseek": "^3.0.58",
+    "@ai-sdk/google": "^4.0.87",
+    "@ai-sdk/moonshotai": "^3.0.62",
+    "@ai-sdk/openai": "^4.0.83",
+    "@ai-sdk/openai-compatible": "^3.0.62",
+    "@ai-sdk/react": "^4.0.129",
+    "@ai-sdk/zai": "^3.0.24",
+    "@openrouter/ai-sdk-provider": "^3.1.0",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.117.2",
+    "ai": "^7.0.126",
+    "drizzle-orm": "^0.45.3",
+    "nanoid": "^6.0.1",
     "next": "16.3.8",
+    "postgres": "^3.4.9",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
+    "streamdown": "^2.7.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@antfu/eslint-config": "^9.5.1",
+    "@eslint-react/eslint-plugin": "^5.23.3",
+    "@next/eslint-plugin-next": "^16.3.8",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.3.8",
+    "dotenv": "^18.0.5",
+    "drizzle-kit": "^0.31.11",
+    "eslint": "^10.11.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
     "tailwindcss": "^4",
     "typescript": "^5"
-  },
-  "packageManager": "pnpm@11.0.8"
+  }
 }
