@@ -43,6 +43,13 @@
       "when": 1792444525026,
       "tag": "20261019211525_quizzes",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792522220610,
+      "tag": "20261020185020_plans",
+      "breakpoints": true
     }
   ]
 }

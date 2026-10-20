@@ -202,7 +202,7 @@ What to borrow (MIT code can be copied with its license notice):
 - [x] Home page: conversation list and New chat
 - [x] Hosted Supabase project created and migrated
 - [ ] Push `feat/scaffold` and open a PR (committed 1651ff2)
-- [ ] Rotate the Anthropic API key (was in a local commit)
+- [x] Rotate the Anthropic API key (leaked key disabled 2026-10-20)
 - [ ] Install AI Elements, build chat shell from mocks
 - [x] Selection toolbar with Ask, above the selection
 - [x] Highlight painting (CSS Custom Highlight API)

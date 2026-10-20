@@ -23,8 +23,8 @@ export async function POST(req: Request) {
   if (!userId)
     return new Response('Unauthorized', { status: 401 })
 
-  const { id, message }: { id: string, message: UIMessage } = await req.json()
-  const convo = await getOrStartConversation(userId, id)
+  const { id, message, planId }: { id: string, message: UIMessage, planId?: string } = await req.json()
+  const convo = await getOrStartConversation(userId, id, planId)
   if (!convo)
     return new Response('Not found', { status: 404 })
   if (message.role !== 'user')
