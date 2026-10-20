@@ -14,21 +14,30 @@ Three milestones: the POC proves side threads, the MVP adds the learning loop, a
 
 | Milestone | In scope | Done when |
 | --- | --- | --- |
-| M0 POC | Highlight to ask, side-thread rail, Claude only | I can pick apart one long answer with three or more threads |
-| M1 MVP | Learning setup, ask-user cards, bring threads into main, context compaction | I use it for a week instead of Claude chat for one topic |
+| M0 POC | Highlight to ask, side-thread rail, side questions folded into main, Claude only | I can pick apart one long answer with three or more threads |
+| M1 MVP | Learning setup, ask-user cards, context compaction | I use it for a week instead of Claude chat for one topic |
 | Later | Pop quizzes, XP and streak, free-text grading, spaced review of missed concepts, concept mastery map, shareable sessions for the showcase, selectable tutor avatars (unlocked with XP first, paid later), bring-your-own models (DeepSeek, Kimi, GLM, OpenRouter) | Picked after M1 |
 | Pinned | Web search tool with cited sources (see Web search) | Scheduled once a topic I study needs facts newer than the model's cutoff |
 
-### Learning setup
+### Plans
 
-A new session opens on "What do you want to learn?" plus four optional fields: goal (what you want to be able to do), current level (new, some, comfortable), depth (overview or deep dive), and quiz frequency (off, occasional, frequent). Stored as `goal` JSON on `conversations`. The model can refine it with an ask-user card in its first turn.
+Agreed 2026-10-20. Chat sessions live in a **plan**; chats without one are listed as Uncategorized. A plan is the golden path. Training is a layer on top of learning: every plan learns, and a plan trains only once it has `training.md`.
+
+- **Wizard (form first, no name field):** what you want to learn, why, level (new, some, comfortable), how serious (casual, steady, serious plus an optional deadline), optional material. The tutor drafts `brief.md` and `syllabus.md` and the title from it; rename later.
+- **Docs, fixed headings:** `brief.md` (Goal, Why, Level, Seriousness, Constraints); `syllabus.md` (Units as a checklist, each may cite material; Notes); `training.md` (Method, Rubric, Log, Next). Learner and tutor fill them together. Every save is a new version; restore copies an old one forward.
+- **Material:** your own uploads (PDF, Markdown) or pasted text: curricula, prep docs, past questions, resume and stories. Text is extracted at upload and shown so you see what the tutor reads. Not in context by default; the tutor reads sections with `read_material`.
+- **Sessions:** "New learning session" or "New training session (guided, full or card drill)". Mode and style are fixed at creation. Quizzes, study guides and threads stay session-scoped.
+- **Tutor writes freely**, one section at a time with `update_doc`, only at natural points (after quiz results, at the end of a rep, when asked). Each write shows a note in the chat and is undoable from history.
+- **Context:** the system prompt is built from the docs at the versions pinned when the session started, so it stays cached; threads use the same one. Your edits, and writes from other sessions, reach a running session as `<plan_updated>` with only the changed sections, on your next message (like side questions). The tutor's own writes are already in its history.
+- **Reps:** the tutor's answer key goes through `set_rep_key` into `session_secrets`; the saved call keeps the key for the model and is stripped from the stream and page loads. `log_rep` appends the Log row, replaces Next and reveals the key. The log grows without limit for now.
+- **Defaults taken (change any):** rep style fixed at start; plan sessions use `toolChoice: 'auto'` and `ask_user` leaves the tool set until its card exists; deleting a plan moves its sessions to Uncategorized; 50MiB per file, drafting reads at most about 100k tokens of material (table of contents and first pages beyond that).
 
 ### Ask-user cards and quizzes
 
 Both are AI SDK tools with no server `execute`: the model calls them and the client renders a card, like Claude's multiple-choice prompt.
 
 - **`ask_user`**: a question with 2 to 4 options (label + one-line description), plus "something else" and skip. The answer goes back with `addToolOutput`; `sendAutomaticallyWhen` continues the turn.
-- **`quiz`**: question, options, correct index, explanation, concept tag. The card grades locally, shows the explanation and returns the result to the model.
+- **`create_quiz`**: server tool. 1 to 5 questions (question, four choices, correct index, explanation), saved to `quizzes` / `quiz_questions`. The card never gets the answer key: the server grades each pick (`quiz_answers`) and sends the results back to the tutor when the quiz ends.
 - **Answer key on the client:** acceptable for a single-user learning app. Strip it from the stream later if sessions become shared.
 
 ### Free-text answers
@@ -48,11 +57,11 @@ The app sets the cadence; the model writes the quiz. With "occasional", every 4t
 
 ### Progress
 
-XP comes only from quizzes: 10 for correct first try, 3 for correct after a miss. A streak counts consecutive days with at least one quiz answered. Both are derived from `quiz_attempts`, so there is no stats table to keep in sync. Per-concept accuracy from the same table drives "review this" later.
+XP comes only from quizzes: 10 for correct first try, 3 for correct after a miss. A streak counts consecutive days with at least one quiz answered. Both are derived from `quiz_answers`, so there is no stats table to keep in sync. Per-concept accuracy from the same table drives "review this" later.
 
 ### What this changes in the build
 
-- **Schema:** `conversations.goal` (JSON); new `quiz_attempts` (id, conversation id, message id, tool call id, concept, correct, attempts, answered at).
+- **Schema:** plan tables (see Plans and the work tracker); `quizzes`, `quiz_questions`, `quiz_answers` (built); add a concept tag per question for per-concept accuracy.
 - **Threads must send the same tool definitions as main.** Tools sit at the front of the cached prefix, so a thread without them misses the cache. Threads set `toolChoice: "none"` instead.
 
 ### Web search (pinned)
@@ -91,7 +100,7 @@ erDiagram
     uuid id PK
     uuid user_id FK
     text title
-    jsonb goal "M1"
+    uuid plan_id FK "M1, null = Uncategorized"
   }
   MESSAGES {
     text id PK "AI SDK message id"
@@ -107,8 +116,7 @@ erDiagram
     jsonb anchor "quote, prefix, suffix"
     int snapshot_index
     thread_status status
-    text digest "M1"
-    timestamptz merged_at "M1"
+    int folded_through "M1"
     uuid summary_id FK "M1"
   }
   THREAD_MESSAGES {
@@ -137,7 +145,7 @@ Threads point at both the conversation and the exact message they quote; `snapsh
 | Stack | Next.js 16, Tailwind v4, AI SDK 7, Drizzle | Current versions, all typed |
 | Auth + DB | Supabase: email OTP or magic link, Postgres | One service for both |
 | Data access | Drizzle as table owner; RLS on with no policies | Blocks the public Data API; every query filters by user id |
-| Models | Claude only for the POC, from `ANTHROPIC_API_KEY`; bring-your-own models later | One provider key to manage; the removed BYO code is in commit e0f061b |
+| Models | Claude only for the POC, from `ANTHROPIC_API_KEY`: Haiku 5.5 or Sonnet 5.5, picked under the chat bar (cookie, default `ANTHROPIC_MODEL`); bring-your-own models later | One provider key to manage; the removed BYO code is in commit e0f061b |
 | Thread context | Frozen fork at the snapshot, same model as main | Shared prefix is a prompt cache hit |
 | Thread instructions | In the user turn, not the system prompt | Keeps the cached prefix byte-identical |
 | Accounts | Our own `profiles` table keyed to `auth.users`, filled by a signup trigger; table names plural | We own user data like names; plural matches Supabase's `auth.users` |
@@ -145,6 +153,7 @@ Threads point at both the conversation and the exact message they quote; `snapsh
 | Prompts | TypeScript modules in the repo, versioned by git; no hosted prompt manager | Only developers edit them; typed arguments and diffs come free |
 | Migrations | Drizzle generates into `supabase/migrations`; the Supabase CLI applies them. One migration per task, checked by `drizzle-kit check` and squawk | One runner that knows the auth schema; `db reset` and `db push` work locally and on hosted |
 | Local dev | `supabase start` in Docker on ports 553xx; hosted values in `.env.remote` | Real Auth and Mailpit locally; 553xx avoids another local Supabase project on the defaults |
+| Testing | Vitest for pure logic (anchors, fold, side-question rendering); an opt-in smoke script for the full stack; no component tests yet | Cheap coverage where bugs hide; the smoke test calls Claude, so it stays out of `pnpm test` |
 | Tools | Native tool calling via AI SDK `tool()` with zod schemas; one registry, no MCP | Every supported provider has tool calling; zod validates every call |
 
 ## Framework comparison
@@ -195,20 +204,54 @@ What to borrow (MIT code can be copied with its license notice):
 - [ ] Push `feat/scaffold` and open a PR (committed 1651ff2)
 - [ ] Rotate the Anthropic API key (was in a local commit)
 - [ ] Install AI Elements, build chat shell from mocks
-- [ ] Selection listener and "Ask" popover
-- [ ] Highlight painting (CSS Custom Highlight API)
-- [ ] Thread rail positioning and overlap
-- [ ] Thread UI: open a thread, stream its reply, resolve
+- [x] Selection toolbar with Ask, above the selection
+- [x] Highlight painting (CSS Custom Highlight API)
+- [x] Thread rail positioning and overlap
+- [x] Thread UI: comment-style cards, reply box, mobile drawer
+- [ ] Check the mobile drawer on a real phone
+- [x] Tests: Vitest unit tests (`pnpm test`) and an opt-in smoke test (`pnpm test:smoke`)
+- [x] Fold thread exchanges into main (`data-side-questions`, `folded_through`)
 
 ### M1 MVP
-- [ ] Learning setup screen and `conversations.goal`
+- Plans, step 1: plans and docs
+  - [ ] 1.1 Schema: `plans`, `plan_docs`, `plan_doc_versions`; `conversations.plan_id`, `pinned`, `seen`
+  - [ ] 1.2 Doc templates (fixed headings) and `systemFor(conversation)` in the chat and thread routes; prompt snapshots
+  - [ ] 1.3 Wizard `/plans/new` (no material yet): one streamed draft call writes the title, brief v1 and syllabus v1
+  - [ ] 1.4 Plan page `/p/[id]`: sessions list, New learning session, read-only docs drawer; home lists plans, then Uncategorized
+  - [ ] 1.5 Move an Uncategorized chat into a plan
+- Plans, step 2: tutor writes and folding
+  - [ ] 2.1 Drawer editing per section, version history, restore
+  - [ ] 2.2 Fold `<plan_updated>` (changed sections) into the next learner message; advance `seen`
+  - [ ] 2.3 `update_doc` tool, chat note on each write, `toolChoice: 'auto'` in plan sessions, `ask_user` out of the tool set
+- Plans, step 3: material
+  - [ ] 3.1 Private Storage bucket, signed uploads, paste; Material tab with the "what goes here" empty state
+  - [ ] 3.2 Text extraction (`unpdf`) with a preview and token count
+  - [ ] 3.3 Material in the wizard draft (capped)
+  - [ ] 3.4 `read_material` tool; multi-step replies (`stopWhen`)
+- Plans, step 4: training
+  - [ ] 4.1 `conversations.mode` and `training_style`; New training session with a style; mode block in the system prompt
+  - [ ] 4.2 First training session sets up `training.md` (Method, Rubric) with the learner
+  - [ ] 4.3 `set_rep_key` and `session_secrets`; key stripped from the stream and page loads
+  - [ ] 4.4 `log_rep`: append the Log row, replace Next, reveal the key
 - [ ] `ask_user` tool and card
 - [ ] Context compaction (rolling summary)
-- [ ] Bring threads into main
-- [ ] Conversation titles
+- [x] Conversation header: click the title to edit it, sidebar icon (drawer not built)
+- [x] Generated conversation titles: Haiku names the conversation from its first message, alongside the reply; a rename wins
+- [x] Slash-command menu in the main composer: `/` lists Quiz Me and Create Study Guide, filters on label or command, picking fills `/name ` (server doesn't run them yet)
+- [x] `/quiz-me`: the model must call `create_quiz` (server tool, thinking off for that call); its execute saves `quizzes` + `quiz_questions` (choices shuffled) scoped to the request's user and conversation. The saved/streamed card keeps questions and choices only. The card grades each pick through a server action (`quiz_answers`), resumes after reload, and ends with Finish or Exit; ending sends a learner message whose results the server rebuilds from the database, and the tutor reviews (misses and skips explained, takeaways if all right). The main chat is blocked (client and server) while a quiz is active; threads are not
+- [ ] `/create-study-guide` (reaches the tutor as plain text for now)
+- [ ] Quiz: other answer types (free text graded by the model); a check on the model's answer key (or a "this answer is wrong" button); rate limit /quiz-me
+- [ ] Push the `quizzes` migration to hosted (`pnpm db:push`)
+- [x] New chats are saved on the first message (`/new`, id picked client-side); backing out of an empty chat leaves no row
+- [x] Tutor copy button shows on hover (always on touch); scroll-to-bottom arrow fades in and out (200ms)
+- [x] Model picker under the chat bar: Haiku 5.5 / Sonnet 5.5, saved in a cookie that main, thread and scratch routes read
+- [x] Reply hardening: learner message saved before the model call; reply saved from the server's own stream copy (survives dropped connections); finish reason in `metadata`; cut-off/error notice with Retry; retries replace instead of duplicating
+- [ ] Push `threads_folding` and `message_metadata` migrations to hosted (`pnpm db:push`)
+- [ ] Resumable streams (reconnect to an in-flight reply after reload); mid-stream provider retries (`streamRetries`)
 - [x] Prompt and tool registry scaffold
 - [ ] Tool-call repair
-- [ ] Prompt version hash on messages, prefix snapshot test
+- [x] Prompt snapshot test (`lib/ai/prompts/prompts.test.ts`); prompts written with `dedent`
+- [ ] Prompt version hash on messages; add tool definitions to the snapshot once tools are wired
 
 ### Later
 - [ ] `quiz` tool, card and `quiz_attempts`
@@ -232,18 +275,29 @@ Proposal: keep the last 20 messages verbatim and fold everything older into one 
 
 Count tokens rather than messages if answers run long: 20 long answers can exceed a small open-weight model's context window.
 
-## Bring threads into main
+## Threads and side questions
 
-In scope: a manual "Bring into main" button per thread. It condenses the thread into a short digest, and the next main turn carries it.
+Decided 2026-10-10: every thread exchange folds into main automatically. There is no merge button.
 
-1. **Digest:** summarize the thread into 2 to 4 sentences (quote, question, what was learned or corrected). Store on the thread (`digest`, `merged_at`).
-2. **Staging:** merged digests show as chips above the main input; the user can remove one before sending.
-3. **Delivery:** digests ride in the user message as a `data-thread-digest` part, saved with that message. `convertToModelMessages` turns them into text via `convertDataPart`.
-4. **Not the system prompt:** that would miss the cache every turn.
-5. **Compaction:** digests are ordinary message content; the rolling summary absorbs them.
-6. **Thread state:** a merged thread shows as merged and can stay open; merging again sends a new digest.
+**The thread**
 
-Schema change: `threads` gets `digest text` and `merged_at timestamptz`, plus the new `context_summaries` table. Automatic merging stays out of scope.
+1. **Fork:** opening a thread freezes main as it stands at that moment (the latest message, plus the summary once compaction exists). The highlighted text is the anchor, not the fork point. `snapshot_index` is main's latest message index when the thread opens.
+2. **Same prefix:** same model, system prompt and tools as main, with `toolChoice: "none"`, so the thread's first request is a cache hit on main.
+3. **Thread prompt:** rides in the thread's first user message, after the quote. Draft: "You are answering a side question about one passage from your earlier answer. Answer briefly and only about that passage; the learner will return to the main lesson." Versioned with the other prompts.
+4. **Frozen:** a thread does not see main turns that happen after it opens.
+
+**Folding into main**
+
+1. **On each main send,** completed thread exchanges since the last fold attach to the outgoing user message as a `data-side-questions` part, saved with it. Shape: `{ questions: [{ threadId, regarding, messages }] }`.
+2. **What the model sees:** `<side_questions><question regarding="…"><learner>…</learner><tutor>…</tutor></question></side_questions>` before the user's text.
+3. **Deltas:** a thread that continues later sends only its new exchanges next time. `threads.folded_through` counts the thread messages already folded.
+4. **Complete exchanges only:** a reply still streaming waits for the next main turn.
+5. **Staleness is positional:** folded questions sit where they happened in the timeline, and compaction absorbs them with the turns around them. Nothing ages out separately.
+6. **System prompt line:** side questions are already answered; use them to see what confused the learner, and do not repeat them.
+
+Trade-offs: long thread answers add tokens to main (cap or summarize later if it bites). Folded content stays after a thread is deleted, because history is append-only.
+
+Schema change: `threads` gains `folded_through integer default 0`. The planned `digest` and `merged_at` columns are dropped.
 
 ## Prompts and tools
 
@@ -253,8 +307,8 @@ Decided 2026-10-10: prompts and tools live in the repo as typed TypeScript, in `
 | --- | --- | --- | --- |
 | System prompt | Start of the cached prefix | Once per conversation | Tutor persona, teaching style, learning goal, what injected tags mean |
 | Tool definitions | Cached prefix | Only on deploy | `ask_user`, `quiz`, `web_search` (pinned) |
-| Per-turn additions | Inside the user message | Every turn | Thread framing, quiz nudge, thread digests, rolling summary, today's date |
-| Task prompts | Their own call | Per task | Grader, summarizer, digest, title, lesson planner, each with a zod output schema |
+| Per-turn additions | Inside the user message | Every turn | Thread prompt, side questions, rolling summary, today's date |
+| Task prompts | Their own call | Per task | Summarizer, title, lesson planner, each with a zod output schema |
 
 - **Layout:** `prompts/system.ts`, `prompts/turn.ts`, `prompts/tasks/*`; `tools/schemas.ts` holds definitions with no server code so client cards can import them, and `tools/index.ts` is the registry plus `FunlernUIMessage` types.
 - **Templates:** plain functions with typed arguments, no `{{ }}` engine. Injected content is wrapped in tags the system prompt explains, with user text escaped.
@@ -266,7 +320,6 @@ Decided 2026-10-10: prompts and tools live in the repo as typed TypeScript, in `
 
 - [ ] Compaction trigger: message count (40 down to 20) or a token budget per model?
 - [ ] Summary model: Sonnet, same as chat, or Haiku for cost?
-- [ ] Digest review: show the digest for editing before attaching, or attach as generated?
 - [ ] Regenerating a main answer orphans its threads. Keep as detached, or delete?
 - [x] Decided: hosted Supabase project is created and migrated; day-to-day work runs locally on `supabase start`.
 - [ ] Quiz cadence (Later): app-driven every N turns (proposed), or let the model decide when?
