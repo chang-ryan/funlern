@@ -2,6 +2,7 @@ import type { DocVersions } from './schema'
 import type { DocKind } from '@/lib/plans/docs'
 import type { PlanUpdate } from '@/lib/plans/updates'
 import { and, desc, eq, isNull, max, sql } from 'drizzle-orm'
+import { z } from 'zod'
 import { DOC_FILE, DOC_SECTIONS, parseDoc, renderDoc } from '@/lib/plans/docs'
 import { changedSections } from '@/lib/plans/updates'
 import { db } from '.'
@@ -26,7 +27,10 @@ export async function getPlans(userId: string) {
   return db.select().from(plans).where(eq(plans.userId, userId)).orderBy(desc(plans.createdAt))
 }
 
+/** The learner's plan, or null for anyone else's or a malformed id (ids come from URLs and request bodies). */
 export async function getPlan(userId: string, planId: string) {
+  if (!z.uuid().safeParse(planId).success)
+    return null
   const [row] = await db.select().from(plans).where(and(eq(plans.id, planId), eq(plans.userId, userId))).limit(1)
   return row ?? null
 }
