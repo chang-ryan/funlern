@@ -40,3 +40,9 @@ export function parseDoc<K extends DocKind>(kind: K, body: string): Sections<K> 
   }
   return Object.fromEntries(Object.entries(sections).map(([name, lines]) => [name, lines.join('\n').trim()])) as Sections<K>
 }
+
+/** A plan's one-line description: the first paragraph of its brief's Goal, as plain text. */
+export function planDescription(briefBody: string) {
+  const goal = parseDoc('brief', briefBody).Goal ?? ''
+  return goal.split(/\n\s*\n/)[0].replace(/^\s*[-*]\s+/gm, '').replace(/[*_`]/g, '').replace(/\s+/g, ' ').trim()
+}
