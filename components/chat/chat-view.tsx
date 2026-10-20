@@ -12,7 +12,7 @@ import { ModelPicker } from './model-picker'
 import { ReplyProblem } from './reply-problem'
 
 /** Presentational chat: scrolling transcript + composer. State lives in the caller's useChat. */
-export function ChatView({ messages, status, error, onSend, onStop, onRetry, model, session, top, blocked, header, renderTutor, rail, overlay, transcriptRef, onTranscriptClick, onTranscriptPointerMove }: {
+export function ChatView({ messages, status, error, onSend, onStop, onRetry, model, session, top, suggestions, blocked, header, renderTutor, rail, overlay, transcriptRef, onTranscriptClick, onTranscriptPointerMove }: {
   messages: UIMessage[]
   status: ChatStatus
   error?: Error
@@ -26,6 +26,8 @@ export function ChatView({ messages, status, error, onSend, onStop, onRetry, mod
   session?: ReactNode
   /** A panel under the header that stays put while the transcript scrolls beneath it (mission control). */
   top?: ReactNode
+  /** Suggested messages on the composer, sent in one click. Off unless given; mission control turns them on. */
+  suggestions?: { items: string[], onPick: (text: string) => void }
   /** Why the learner can't send right now, e.g. a quiz waiting to be finished. */
   blocked?: string
   header?: ReactNode
@@ -109,19 +111,41 @@ export function ChatView({ messages, status, error, onSend, onStop, onRetry, mod
       </div>
       <div className={`mx-auto flex w-full gap-8 px-4 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] ${width}`}>
         <div className="relative min-w-0 flex-1">
-          {/* Always mounted so it can fade both ways; hidden from clicks and focus while faded out. */}
-          <button
-            type="button"
-            aria-label="Scroll to bottom"
-            aria-hidden={!awayFromBottom}
-            tabIndex={awayFromBottom ? undefined : -1}
-            onClick={() => scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: 'smooth' })}
-            className={`absolute bottom-full left-1/2 mb-3 flex size-10 -translate-x-1/2 items-center justify-center rounded-full border border-muted/40 bg-surface text-foreground shadow-lg transition-opacity duration-200 hover:bg-tutor ${awayFromBottom ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
-          >
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden>
-              <path d="M10 4v12M5 11l5 5 5-5" />
-            </svg>
-          </button>
+          {/* Suggested messages sit on the composer while the reader is at the bottom; scrolling up swaps them for the arrow. */}
+          <div className="relative">
+            {suggestions && suggestions.items.length > 0 && (
+              <div
+                aria-hidden={awayFromBottom}
+                className={`mb-2 flex flex-wrap gap-2 transition-opacity duration-200 ${awayFromBottom ? 'pointer-events-none opacity-0' : 'opacity-100'}`}
+              >
+                {suggestions.items.map(s => (
+                  <button
+                    key={s}
+                    type="button"
+                    tabIndex={awayFromBottom ? -1 : undefined}
+                    disabled={busy || !!blocked}
+                    onClick={() => suggestions.onPick(s)}
+                    className="rounded-full border border-border px-3 py-1 text-sm hover:bg-tutor disabled:opacity-50 disabled:hover:bg-transparent"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+            {/* Always mounted so it can fade both ways; hidden from clicks and focus while faded out. */}
+            <button
+              type="button"
+              aria-label="Scroll to bottom"
+              aria-hidden={!awayFromBottom}
+              tabIndex={awayFromBottom ? undefined : -1}
+              onClick={() => scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: 'smooth' })}
+              className={`absolute left-1/2 flex size-10 -translate-x-1/2 items-center justify-center rounded-full border border-muted/40 bg-surface text-foreground shadow-lg transition-opacity duration-200 hover:bg-tutor ${suggestions?.items.length ? 'top-1/2 -translate-y-1/2' : 'bottom-full mb-3'} ${awayFromBottom ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+            >
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden>
+                <path d="M10 4v12M5 11l5 5 5-5" />
+              </svg>
+            </button>
+          </div>
           <Composer onSend={onSend} onStop={onStop} busy={busy} commands={COMMANDS} disabledReason={blocked} />
           <div className="flex items-center gap-3">
             {model && <ModelPicker initial={model} />}

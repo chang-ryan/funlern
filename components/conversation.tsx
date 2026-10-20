@@ -56,8 +56,9 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
   trainingStyle?: TrainingStyle | null
   /** Sent as soon as the conversation mounts, e.g. typed on the plan page. */
   firstMessage?: string
-  /** A panel that stays above the transcript, with suggested messages to send in one click (mission control). */
+  /** A panel that stays above the transcript (mission control). */
   intro?: ReactNode
+  /** Suggested messages on the composer, sent in one click; none unless given. */
   suggestions?: string[]
   /** Keep the page's URL once saved (mission control lives at /p/[id]/mc), instead of moving to /c/{id}. */
   stayOnPage?: boolean
@@ -321,26 +322,8 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
       onRetry={() => regenerate()}
       model={model}
       session={<SessionModeChip mode={mode} style={trainingStyle} />}
-      top={(intro || suggestions?.length) && (
-        <div className="flex flex-col gap-3">
-          {intro}
-          {suggestions && suggestions.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {suggestions.map(s => (
-                <button
-                  key={s}
-                  type="button"
-                  disabled={status === 'submitted' || status === 'streaming' || !!activeQuiz}
-                  onClick={() => send(s)}
-                  className="rounded-full border border-border px-3 py-1 text-sm hover:bg-tutor disabled:opacity-50 disabled:hover:bg-transparent"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      top={intro}
+      suggestions={suggestions && { items: suggestions, onPick: send }}
       transcriptRef={transcriptRef}
       header={<ConversationHeader id={id} title={currentTitle} setTitle={setCurrentTitle} saved={saved} plan={plan} />}
       onTranscriptClick={onTranscriptClick}
