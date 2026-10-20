@@ -110,8 +110,12 @@ export function Conversation({ id, isNew = false, planId, firstMessage, title, m
   useEffect(() => {
     if (!firstMessage || sentFirstRef.current)
       return
-    sentFirstRef.current = true
-    sendMessage({ text: firstMessage }, planId ? { body: { planId } } : undefined)
+    // Deferred: in dev, StrictMode's extra cleanup runs useChat's stop(), which would abort a send made now.
+    const timer = setTimeout(() => {
+      sentFirstRef.current = true
+      sendMessage({ text: firstMessage }, planId ? { body: { planId } } : undefined)
+    })
+    return () => clearTimeout(timer)
   }, [firstMessage, planId, sendMessage])
 
   // A reply arriving means the server has saved the conversation; give it its real URL.
