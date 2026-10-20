@@ -17,7 +17,7 @@ pnpm db:start                # local Supabase on ports 553xx; applies supabase/m
 pnpm dev
 ```
 
-`.env.local` is gitignored; keys go there, never in `.env.example`.
+`.env.local` is gitignored; keys go there, never in `.env.example`. Plan material lives in the private `materials` Storage bucket, defined in `supabase/config.toml`; if a running stack predates it, `supabase seed buckets --local` creates it.
 
 | Variable | Where it comes from |
 | --- | --- |

@@ -191,6 +191,33 @@ try {
   await post('/api/chat', { id: loose.id, start: { mode: 'training' }, message: say('hi') })
   assert.equal((await sql`select mode from conversations where id = ${loose.id}`)[0].mode, 'learning', 'training needs a plan')
   step('training', 'setup session wrote training.md (Method, Rubric); next session is a card-drill rep pinning it; no plan means learning')
+
+  // Material: pasted text is pinned into new sessions; adding or deleting reaches a running one on its next message.
+  const addMaterial = async (fields) => {
+    const form = new FormData()
+    for (const [k, v] of Object.entries(fields)) form.set(k, v)
+    return fetch(`${APP}/api/plans/${plan.id}/materials`, { method: 'POST', headers: { cookie }, body: form })
+  }
+  const pasted = await addMaterial({ name: 'Examiner notes', text: 'The examiner always opens by asking about the weather in Aberystwyth.' })
+  assert.equal(pasted.status, 200, `paste -> ${pasted.status}`)
+  const { id: noteId } = await pasted.json()
+  const ms = { id: crypto.randomUUID() }
+  const opener = textOf(await post('/api/chat', { id: ms.id, start: { planId: plan.id }, message: say('According to my material, what does the examiner open with? Answer in under ten words.') }))
+  assert.match(opener, /weather/i, 'tutor reads pinned material')
+  assert.deepEqual((await sql`select pinned_materials from conversations where id = ${ms.id}`)[0].pinned_materials, [noteId])
+  assert.equal((await addMaterial({ text: 'x'.repeat(120_000) })).status, 422, 'over the token budget is refused')
+
+  await until(async () => await count(sql`select count(*)::int from messages where conversation_id = ${ms.id}`) === 2)
+  assert.equal((await addMaterial({ name: 'Mutations cheat sheet', text: 'Soft mutation after "dy": cath becomes dy gath.' })).status, 200)
+  const added = await post('/api/chat', { id: ms.id, message: say('Per my material, what does cath become after dy? Two words.') })
+  assert.ok(added.includes('"type":"data-plan-updated"') && /gath/i.test(textOf(added)), 'an added file reaches the running session')
+
+  await until(async () => await count(sql`select count(*)::int from messages where conversation_id = ${ms.id}`) === 4)
+  await sql`update plan_materials set deleted_at = now() where id = ${noteId}`
+  const removed = await post('/api/chat', { id: ms.id, message: say('ok') })
+  assert.ok(removed.includes('"removed":[{'), 'a deleted file is announced as removed')
+  assert.match((await sql`select text from plan_materials where id = ${noteId}`)[0].text, /weather/, 'deleted text stays for pinned sessions')
+  step('material', 'pasted file pinned and read; over-budget refused; additions and deletions folded into the running session')
 }
 finally {
   await sql`delete from auth.users where email = ${email}`
