@@ -1,10 +1,15 @@
 import type { UIMessage } from 'ai'
-import { convertToModelMessages, createUIMessageStreamResponse, streamText, toUIMessageStream, validateUIMessages } from 'ai'
+import { createUIMessageStreamResponse, streamText, toUIMessageStream, validateUIMessages } from 'ai'
 import { markCacheBreakpoint } from '@/lib/ai/cache'
-import { model } from '@/lib/ai/model'
+import { toModelMessages } from '@/lib/ai/messages'
+import { currentModel } from '@/lib/ai/model'
 import { SYSTEM_PROMPT } from '@/lib/ai/prompts/system'
 import { threadFrame } from '@/lib/ai/prompts/turn'
-import { getMessages, getThread, getThreadMessages, saveThreadMessages } from '@/lib/db/queries'
+import { finishMetadata, saveReplyWhenDone } from '@/lib/ai/reply'
+import { TOOL_CHOICE, toolsFor } from '@/lib/ai/tools'
+import { placeTurn } from '@/lib/ai/turn'
+import { deleteThreadMessagesFrom, getMessages, getThread, getThreadMessages, saveThreadMessages } from '@/lib/db/queries'
+import { textOf } from '@/lib/messages'
 import { getUserId } from '@/lib/supabase/server'
 
 export async function POST(req: Request) {
@@ -17,31 +22,37 @@ export async function POST(req: Request) {
   if (!t)
     return new Response('Not found', { status: 404 })
 
-  // Frozen fork: main messages up to the snapshot, then this thread's own turns.
-  const prefix = await getMessages(t.conversationId, t.snapshotIndex)
-  const threadMessages = await validateUIMessages({ messages: [...await getThreadMessages(id), message] })
+  // Frozen fork: main as it stood when the thread opened, then this thread's own turns.
+  const prefix = await toModelMessages(await getMessages(t.conversationId, t.snapshotIndex))
+  const turn = placeTurn(await getThreadMessages(id), message)
+  const threadMessages = await validateUIMessages({ messages: [...turn.history, turn.message] })
+
+  // Save the learner's question before calling the model, so a failed or dropped reply never loses it.
+  if (turn.retry)
+    await deleteThreadMessagesFrom(id, turn.dropFrom)
+  await saveThreadMessages(id, threadMessages)
 
   // Stored thread messages keep the raw question; the model sees the first one framed with the quote.
   const [first, ...rest] = threadMessages
-  const question = first.parts.map(p => (p.type === 'text' ? p.text : '')).join('')
-  const framed: UIMessage = { ...first, parts: [{ type: 'text', text: threadFrame(t.anchor, question) }] }
-
-  const prefixModel = await convertToModelMessages(prefix)
+  const framed: UIMessage = { ...first, parts: [{ type: 'text', text: threadFrame(t.anchor, textOf(first)) }] }
+  const own = await toModelMessages([framed, ...rest])
 
   const result = streamText({
-    model,
+    model: await currentModel(),
     system: SYSTEM_PROMPT,
-    messages: [
-      ...markCacheBreakpoint(prefixModel, prefixModel.length - 1),
-      ...await convertToModelMessages([framed, ...rest]),
-    ],
+    tools: toolsFor({ userId, conversationId: t.conversationId }),
+    toolChoice: TOOL_CHOICE,
+    // Breakpoint 1 reuses main's cache; breakpoint 2 caches this thread for its next reply.
+    messages: markCacheBreakpoint(markCacheBreakpoint([...prefix, ...own], prefix.length - 1), prefix.length + own.length - 1),
   })
+  const replyId = saveReplyWhenDone(result.stream, reply => saveThreadMessages(id, [...threadMessages, reply]))
 
   return createUIMessageStreamResponse({
     stream: toUIMessageStream({
       stream: result.stream,
       originalMessages: threadMessages,
-      onEnd: ({ messages }) => saveThreadMessages(id, messages),
+      generateMessageId: () => replyId,
+      messageMetadata: finishMetadata,
     }),
   })
 }

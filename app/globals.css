@@ -13,6 +13,8 @@
   --tutor: #f5f5f4;
   --student: #292524;
   --student-foreground: #fafaf9;
+  --correct: #15803d;
+  --incorrect: #b91c1c;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -25,10 +27,14 @@
     --tutor: #1c1917;
     --student: #e7e5e4;
     --student-foreground: #1c1917;
+    --correct: #4ade80;
+    --incorrect: #f87171;
   }
 }
 
 @theme inline {
+  /* Width of the desktop thread rail beside the transcript. */
+  --spacing-rail: 24rem;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
@@ -37,6 +43,8 @@
   --color-tutor: var(--tutor);
   --color-student: var(--student);
   --color-student-foreground: var(--student-foreground);
+  --color-correct: var(--correct);
+  --color-incorrect: var(--incorrect);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -44,4 +52,12 @@
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+/* Tailwind v4 dropped the pointer cursor on buttons; restore it everywhere. */
+@layer base {
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
 }

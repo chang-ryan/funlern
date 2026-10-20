@@ -23,6 +23,11 @@ pnpm dev
 | Studio | http://127.0.0.1:55323 |
 | Mailpit (sign-in codes) | http://127.0.0.1:55324 |
 
+## Tests
+
+- `pnpm test`: Vitest unit tests for the pure logic (anchors, folding threads into main, side-question rendering).
+- `pnpm test:smoke`: end to end against the local stack (sign in through Mailpit, chat, thread, fold). Needs `pnpm db:start` and `pnpm dev`; calls Claude, so it is opt-in.
+
 ## Database changes
 
 Drizzle owns the schema; the Supabase CLI applies migrations.

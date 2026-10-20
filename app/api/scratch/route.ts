@@ -1,9 +1,9 @@
 import type { UIMessage } from 'ai'
 import { convertToModelMessages, streamText } from 'ai'
-import { model } from '@/lib/ai/model'
+import { currentModel } from '@/lib/ai/model'
 import { SYSTEM_PROMPT } from '@/lib/ai/prompts/system'
 
-// Dev-only, unpersisted chat for the UI preview on `/`.
+// Dev-only, unpersisted chat for the UI preview on `/scratch`.
 export async function POST(req: Request) {
   if (process.env.NODE_ENV === 'production')
     return new Response('Not found', { status: 404 })
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
 
   const { messages }: { messages: UIMessage[] } = await req.json()
   const result = streamText({
-    model,
+    model: await currentModel(),
     system: SYSTEM_PROMPT,
     messages: await convertToModelMessages(messages),
   })

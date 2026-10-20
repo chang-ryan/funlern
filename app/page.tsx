@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { createConversation } from '@/app/actions'
 import { getConversations } from '@/lib/db/queries'
 import { getUserId } from '@/lib/supabase/server'
 
@@ -14,9 +13,7 @@ export default async function Home() {
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8">
       <header className="flex items-center justify-between">
         <h1 className="font-semibold tracking-tight">funlern</h1>
-        <form action={createConversation}>
-          <button className="rounded-lg bg-student px-3 py-1.5 text-sm text-student-foreground">New chat</button>
-        </form>
+        <Link href="/new" className="rounded-lg bg-student px-3 py-1.5 text-sm text-student-foreground">New chat</Link>
       </header>
       {conversations.length === 0
         ? <p className="text-sm text-muted">No conversations yet. Start one to begin learning.</p>

@@ -1,5 +1,6 @@
 import { ScratchChat } from '@/components/chat/scratch-chat'
+import { currentModelId } from '@/lib/ai/model'
 
-export default function Home() {
-  return <ScratchChat />
+export default async function Home() {
+  return <ScratchChat model={await currentModelId()} />
 }

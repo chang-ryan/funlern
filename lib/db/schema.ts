@@ -1,4 +1,4 @@
-import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { boolean, index, integer, jsonb, pgEnum, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
 import { authUsers } from 'drizzle-orm/supabase'
 
 // RLS on with no policies: blocks the Supabase Data API; Drizzle (table owner) bypasses it.
@@ -34,6 +34,7 @@ export const messages = pgTable(
     conversationId: uuid().notNull().references(() => conversations.id, { onDelete: 'cascade' }),
     role: roleEnum().notNull(),
     parts: jsonb().notNull(),
+    metadata: jsonb().$type<MessageMetadata>(),
     index: integer().notNull(),
     ...timestamps,
   },
@@ -42,7 +43,8 @@ export const messages = pgTable(
 
 export interface Anchor { quote: string, prefix: string, suffix: string }
 
-export const threadStatus = pgEnum('thread_status', ['open', 'resolved'])
+/** Stored on tutor messages. `finishReason` other than 'stop' means the reply was cut off (length, error, dropped stream). */
+export interface MessageMetadata { finishReason?: string }
 
 export const threads = pgTable(
   'threads',
@@ -51,9 +53,10 @@ export const threads = pgTable(
     conversationId: uuid().notNull().references(() => conversations.id, { onDelete: 'cascade' }),
     anchorMessageId: text().notNull().references(() => messages.id, { onDelete: 'cascade' }),
     anchor: jsonb().$type<Anchor>().notNull(),
-    // Main messages with index <= snapshotIndex form the forked context.
+    // Main's latest message index when the thread opened; messages up to it form the frozen fork.
     snapshotIndex: integer().notNull(),
-    status: threadStatus().default('open').notNull(),
+    // How many of this thread's messages have been folded into main as side questions.
+    foldedThrough: integer().default(0).notNull(),
     ...timestamps,
   },
   t => [index('threads_conversation_idx').on(t.conversationId)],
@@ -66,8 +69,51 @@ export const threadMessages = pgTable(
     threadId: uuid().notNull().references(() => threads.id, { onDelete: 'cascade' }),
     role: roleEnum().notNull(),
     parts: jsonb().notNull(),
+    metadata: jsonb().$type<MessageMetadata>(),
     index: integer().notNull(),
     ...timestamps,
   },
   t => [index('thread_messages_thread_idx').on(t.threadId, t.index)],
 ).enableRLS()
+
+// Quizzes the tutor writes on /quiz-me. Answers are graded and saved here, so the history of what the
+// learner took survives, and the correct answers never reach the browser before the learner picks.
+export const quizStatusEnum = pgEnum('quiz_status', ['active', 'completed', 'exited'])
+
+export const quizzes = pgTable(
+  'quizzes',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: userId(),
+    conversationId: uuid().notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+    title: text().notNull(),
+    // Active blocks the chat until the learner finishes the quiz or exits it.
+    status: quizStatusEnum().default('active').notNull(),
+    endedAt: timestamp({ withTimezone: true }),
+    ...timestamps,
+  },
+  t => [index('quizzes_conversation_idx').on(t.conversationId)],
+).enableRLS()
+
+export const quizQuestions = pgTable(
+  'quiz_questions',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    quizId: uuid().notNull().references(() => quizzes.id, { onDelete: 'cascade' }),
+    position: integer().notNull(),
+    question: text().notNull(),
+    choices: jsonb().$type<string[]>().notNull(),
+    answer: integer().notNull(),
+    explanation: text().notNull(),
+  },
+  t => [unique('quiz_questions_quiz_position_key').on(t.quizId, t.position)],
+).enableRLS()
+
+// One answer per question for now; retakes would be a new quiz.
+export const quizAnswers = pgTable('quiz_answers', {
+  id: uuid().primaryKey().defaultRandom(),
+  questionId: uuid().notNull().unique().references(() => quizQuestions.id, { onDelete: 'cascade' }),
+  choice: integer().notNull(),
+  correct: boolean().notNull(),
+  ...timestamps,
+}).enableRLS()

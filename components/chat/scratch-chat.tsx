@@ -19,7 +19,7 @@ const SEED: UIMessage[] = [
 ]
 
 /** Unpersisted chat for trying the UI. Talks to /api/scratch. */
-export function ScratchChat() {
+export function ScratchChat({ model }: { model: string }) {
   const { messages, sendMessage, status, error, stop, setMessages } = useChat({
     messages: SEED,
     transport: new DefaultChatTransport({ api: '/api/scratch' }),
@@ -32,6 +32,7 @@ export function ScratchChat() {
       error={error}
       onSend={text => sendMessage({ text })}
       onStop={stop}
+      model={model}
       header={(
         <header className="border-b border-border">
           <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-4">

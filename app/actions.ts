@@ -1,10 +1,11 @@
 'use server'
 
 import type { Anchor } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
-import { getConversation, getThread } from '@/lib/db/queries'
+import { getConversation, getLatestMessageIndex, getMessage } from '@/lib/db/queries'
+import { answerQuestion, getLearnerQuiz } from '@/lib/db/quizzes'
 import { conversations, threads } from '@/lib/db/schema'
 import { getUserId } from '@/lib/supabase/server'
 
@@ -15,23 +16,35 @@ async function requireUser() {
   return userId
 }
 
-export async function createConversation() {
+/** Renames a conversation; an empty title clears it. */
+export async function renameConversation(id: string, title: string | null) {
   const userId = await requireUser()
-  const [row] = await db.insert(conversations).values({ userId }).returning({ id: conversations.id })
-  redirect(`/c/${row.id}`)
+  const value = title?.trim().slice(0, 200) || null
+  await db.update(conversations).set({ title: value }).where(and(eq(conversations.id, id), eq(conversations.userId, userId)))
 }
 
-export async function createThread(input: { conversationId: string, anchorMessageId: string, anchor: Anchor, snapshotIndex: number }) {
+/** Opens a thread on a passage of a tutor message, forking main as it stands now. */
+export async function createThread(input: { conversationId: string, anchorMessageId: string, anchor: Anchor }) {
   const userId = await requireUser()
   if (!await getConversation(userId, input.conversationId))
     throw new Error('Not found')
-  const [row] = await db.insert(threads).values(input).returning()
+  const anchorMessage = await getMessage(input.conversationId, input.anchorMessageId)
+  if (anchorMessage?.role !== 'assistant')
+    throw new Error('Threads anchor on tutor messages only')
+  const snapshotIndex = await getLatestMessageIndex(input.conversationId)
+  const [row] = await db.insert(threads).values({ ...input, snapshotIndex }).returning()
   return row
 }
 
-export async function setThreadStatus(id: string, status: 'open' | 'resolved') {
-  const userId = await requireUser()
-  if (!await getThread(userId, id))
-    throw new Error('Not found')
-  await db.update(threads).set({ status }).where(eq(threads.id, id))
+/** The quiz card's view of a quiz: answers only for questions already answered, or once it has ended. */
+export async function getQuiz(quizId: string) {
+  return getLearnerQuiz(await requireUser(), quizId)
+}
+
+/** Grades one pick on the server and saves it; returns the correct answer and explanation to show. */
+export async function answerQuiz(questionId: string, choice: number) {
+  const result = await answerQuestion(await requireUser(), questionId, choice)
+  if (!result)
+    throw new Error('That question can\'t be answered.')
+  return result
 }

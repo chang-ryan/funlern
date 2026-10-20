@@ -22,6 +22,27 @@
       "when": 1791688927618,
       "tag": "20261011032207_threads",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791690696888,
+      "tag": "20261011035136_threads_folding",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791929344822,
+      "tag": "20261013220904_message_metadata",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792444525026,
+      "tag": "20261019211525_quizzes",
+      "breakpoints": true
     }
   ]
 }
