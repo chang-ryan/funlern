@@ -43,6 +43,30 @@ export function ChatView({ messages, status, error, onSend, onStop, onRetry, mod
   const endRef = useRef<HTMLDivElement>(null)
   const scrollerRef = useRef<HTMLDivElement>(null)
   const [awayFromBottom, setAwayFromBottom] = useState(false)
+  // Floating suggestions need the transcript fully scrolled down, or they'd sit over text.
+  const [atBottom, setAtBottom] = useState(true)
+  // Suggestions float over the end of the transcript; a spacer of their height keeps the last message clear of them.
+  const pillsRef = useRef<HTMLDivElement>(null)
+  const [pillsHeight, setPillsHeight] = useState(0)
+  const hasPills = !!suggestions?.items.length
+  // With suggestions, the arrow takes their place as soon as they fade; without, it waits until the reader is well up.
+  const showPills = hasPills && atBottom
+  const showArrow = hasPills ? !atBottom : awayFromBottom
+  useEffect(() => {
+    const el = pillsRef.current
+    if (!el)
+      return
+    // The spacer grows after the transcript has scrolled down on load; follow it if the reader was at the bottom.
+    const observer = new ResizeObserver(() => {
+      const scroller = scrollerRef.current
+      const wasAtBottom = !!scroller && scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 40
+      setPillsHeight(el.offsetHeight)
+      if (wasAtBottom)
+        requestAnimationFrame(() => scroller.scrollTo({ top: scroller.scrollHeight }))
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasPills])
   const busy = status === 'submitted' || status === 'streaming'
   const problem = replyProblem(messages, error)
   const waiting = awaitingText(messages, busy)
@@ -65,6 +89,7 @@ export function ChatView({ messages, status, error, onSend, onStop, onRetry, mod
       const gap = el.scrollHeight - el.scrollTop - el.clientHeight
       pinned = gap < 40
       setAwayFromBottom(gap > 200)
+      setAtBottom(gap < 8)
     }
     const ro = new ResizeObserver(() => {
       if (pinned)
@@ -104,6 +129,7 @@ export function ChatView({ messages, status, error, onSend, onStop, onRetry, mod
             })}
             {waiting && <Typing />}
             {problem && !busy && <ReplyProblem text={problem} onRetry={onRetry} />}
+            {hasPills && <div aria-hidden style={{ height: pillsHeight }} className="shrink-0" />}
             <div ref={endRef} />
           </div>
           {rail}
@@ -111,21 +137,22 @@ export function ChatView({ messages, status, error, onSend, onStop, onRetry, mod
       </div>
       <div className={`mx-auto flex w-full gap-8 px-4 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] ${width}`}>
         <div className="relative min-w-0 flex-1">
-          {/* Suggested messages sit on the composer while the reader is at the bottom; scrolling up swaps them for the arrow. */}
+          {/* Suggested messages float on the composer while the reader is at the bottom; scrolling up swaps them for the arrow. */}
           <div className="relative">
-            {suggestions && suggestions.items.length > 0 && (
+            {suggestions && hasPills && (
               <div
-                aria-hidden={awayFromBottom}
-                className={`mb-2 flex flex-wrap gap-2 transition-opacity duration-200 ${awayFromBottom ? 'pointer-events-none opacity-0' : 'opacity-100'}`}
+                ref={pillsRef}
+                aria-hidden={!showPills}
+                className={`absolute inset-x-0 bottom-full flex flex-wrap gap-2 pb-2 transition-opacity duration-200 ${showPills ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
               >
                 {suggestions.items.map(s => (
                   <button
                     key={s}
                     type="button"
-                    tabIndex={awayFromBottom ? -1 : undefined}
+                    tabIndex={showPills ? undefined : -1}
                     disabled={busy || !!blocked}
                     onClick={() => suggestions.onPick(s)}
-                    className="rounded-full border border-border px-3 py-1 text-sm hover:bg-tutor disabled:opacity-50 disabled:hover:bg-transparent"
+                    className="rounded-full border border-border bg-background px-3 py-1 text-sm shadow-sm hover:bg-tutor disabled:opacity-50 disabled:hover:bg-background"
                   >
                     {s}
                   </button>
@@ -136,10 +163,10 @@ export function ChatView({ messages, status, error, onSend, onStop, onRetry, mod
             <button
               type="button"
               aria-label="Scroll to bottom"
-              aria-hidden={!awayFromBottom}
-              tabIndex={awayFromBottom ? undefined : -1}
+              aria-hidden={!showArrow}
+              tabIndex={showArrow ? undefined : -1}
               onClick={() => scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: 'smooth' })}
-              className={`absolute left-1/2 flex size-10 -translate-x-1/2 items-center justify-center rounded-full border border-muted/40 bg-surface text-foreground shadow-lg transition-opacity duration-200 hover:bg-tutor ${suggestions?.items.length ? 'top-1/2 -translate-y-1/2' : 'bottom-full mb-3'} ${awayFromBottom ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+              className={`absolute left-1/2 flex size-10 -translate-x-1/2 items-center justify-center rounded-full border border-muted/40 bg-surface text-foreground shadow-lg transition-opacity duration-200 hover:bg-tutor bottom-full mb-3 ${showArrow ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
             >
               <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden>
                 <path d="M10 4v12M5 11l5 5 5-5" />
