@@ -2,7 +2,7 @@ import type { PlanDoc } from '@/lib/db/plans'
 import Link from 'next/link'
 import { DOC_FILE, parseDoc, planDescription } from '@/lib/plans/docs'
 
-/** What mission control shows before its first message: what the plan holds now, and how to change it. */
+/** Mission control's panel, above its conversation: what the plan holds now, and how to change it. */
 export function MissionIntro({ planId, docs, materials }: { planId: string, docs: PlanDoc[], materials: number }) {
   const brief = docs.find(d => d.kind === 'brief')
   const syllabus = docs.find(d => d.kind === 'syllabus')
@@ -34,7 +34,6 @@ export function MissionIntro({ planId, docs, materials }: { planId: string, docs
           </li>
         ))}
       </ul>
-      <p className="text-sm text-muted">Tell mission control what to change, or start with one of these:</p>
     </div>
   )
 }

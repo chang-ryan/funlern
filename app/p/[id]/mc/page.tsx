@@ -19,7 +19,17 @@ export default async function MissionControlPage({ params, searchParams }: PageP
   const { userId, plan, docs, materials } = await loadPlan(id)
   const [mission, model] = await Promise.all([getMissionSession(userId, plan.id), currentModelId()])
   const firstMessage = typeof action === 'string' ? ACTIONS[action] : undefined
-  const common = { mode: 'mission' as const, title: 'Mission control', plan: { id: plan.id, title: plan.title }, model, firstMessage, stayOnPage: true }
+  const common = {
+    mode: 'mission' as const,
+    title: 'Mission control',
+    plan: { id: plan.id, title: plan.title },
+    model,
+    firstMessage,
+    stayOnPage: true,
+    // Stays above the conversation, refreshed after each reply.
+    intro: <MissionIntro planId={plan.id} docs={docs} materials={materials.length} />,
+    suggestions: missionSuggestions({ hasTraining: docs.some(d => d.kind === 'training'), materials: materials.length }),
+  }
 
   if (!mission) {
     return (
@@ -28,8 +38,6 @@ export default async function MissionControlPage({ params, searchParams }: PageP
         id={crypto.randomUUID()}
         isNew
         start={{ planId: plan.id, mode: 'mission' }}
-        intro={<MissionIntro planId={plan.id} docs={docs} materials={materials.length} />}
-        suggestions={missionSuggestions({ hasTraining: docs.some(d => d.kind === 'training'), materials: materials.length })}
         initialMessages={[]}
         initialThreads={[]}
       />

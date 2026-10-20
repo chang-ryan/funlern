@@ -8,6 +8,7 @@ import type { Anchor } from '@/lib/db/schema'
 import type { SessionMode, SessionStart, TrainingStyle } from '@/lib/plans/modes'
 import { Chat, useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
+import { useRouter } from 'next/navigation'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createThread } from '@/app/actions'
 import { anchorFromRange, rangeFromAnchor } from '@/lib/anchor'
@@ -55,7 +56,7 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
   trainingStyle?: TrainingStyle | null
   /** Sent as soon as the conversation mounts, e.g. typed on the plan page. */
   firstMessage?: string
-  /** Shown before the first message, with suggested first messages to send in one click. */
+  /** A panel that stays above the transcript, with suggested messages to send in one click (mission control). */
   intro?: ReactNode
   suggestions?: string[]
   /** Keep the page's URL once saved (mission control lives at /p/[id]/mc), instead of moving to /c/{id}. */
@@ -92,10 +93,16 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
     return chat
   }
 
+  const router = useRouter()
   const { messages, sendMessage, regenerate, status, error, stop, setMessages } = useChat({
     id,
     messages: initialMessages,
     transport: chatTransport,
+    // A page that shows the plan beside the chat (mission control) re-reads it after each reply, which may have edited it.
+    onFinish: () => {
+      if (stayOnPage)
+        router.refresh()
+    },
     // The server adds folded side questions and rebuilt quiz results to this turn's learner message.
     // On the first turn it also sends the title it generated.
     onData: (part) => {
@@ -314,13 +321,19 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
       onRetry={() => regenerate()}
       model={model}
       session={<SessionModeChip mode={mode} style={trainingStyle} />}
-      empty={(intro || suggestions?.length) && (
-        <div className="flex flex-col gap-4">
+      top={(intro || suggestions?.length) && (
+        <div className="flex flex-col gap-3">
           {intro}
           {suggestions && suggestions.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {suggestions.map(s => (
-                <button key={s} type="button" onClick={() => send(s)} className="rounded-full border border-border px-3 py-1.5 text-sm hover:bg-tutor">
+                <button
+                  key={s}
+                  type="button"
+                  disabled={status === 'submitted' || status === 'streaming' || !!activeQuiz}
+                  onClick={() => send(s)}
+                  className="rounded-full border border-border px-3 py-1 text-sm hover:bg-tutor disabled:opacity-50 disabled:hover:bg-transparent"
+                >
                   {s}
                 </button>
               ))}
