@@ -36,6 +36,7 @@ export function PlanHome({ plan, sessions, model, files, hasTraining, initialMod
         id={started.id}
         isNew
         start={started.start}
+        trainingStyle={started.start.style ?? null}
         firstMessage={started.text}
         title={null}
         plan={plan}

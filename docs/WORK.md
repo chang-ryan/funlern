@@ -25,12 +25,12 @@ Agreed 2026-10-20. Chat sessions live in a **plan**; chats without one are liste
 
 - **Wizard (form first, no name field):** what you want to learn, why, level (new, some, comfortable), how serious (casual, steady, serious plus an optional deadline), optional material. The tutor drafts `brief.md` and `syllabus.md` and the title from it; rename later.
 - **Docs, fixed headings:** `brief.md` (Goal, Why, Level, Seriousness, Constraints); `syllabus.md` (Units as a checklist, each may cite material; Notes); `training.md` (Method, Rubric, Log, Next). Learner and tutor fill them together. Every save is a new version; restore copies an old one forward.
-- **Material:** your own uploads (PDF, Markdown) or pasted text: curricula, prep docs, past questions, resume and stories. Text is extracted at upload and shown so you see what the tutor reads. Not in context by default; the tutor reads sections with `read_material`.
+- **Material (agreed 2026-10-20):** your own uploads (PDF, Markdown) or pasted text: curricula, prep docs, past questions, resume and stories. At most 5 files and about 30k tokens per plan, so no embeddings, sections or `read_material`: the extracted text goes into the system prompt beside the docs and is cached. Upload once, extract once (pdf.js text layer; a one-time Claude transcription for scanned pages); the original stays in private Storage and the Material tab shows the extracted text. Files are write-once: no editing, no re-extraction; to change one, delete it and add another. Deleting is soft, so running sessions keep their pinned material; sessions pin their material list at start, and additions (full text) or removals (a short note) fold into the next learner message like doc edits.
 - **Sessions:** "New learning session" or "New training session (guided, full or card drill)". Mode and style are fixed at creation. Quizzes, study guides and threads stay session-scoped.
 - **Tutor writes freely**, one section at a time with `update_doc`, only at natural points (after quiz results, at the end of a rep, when asked). Each write shows a note in the chat and is undoable from history.
 - **Context:** the system prompt is built from the docs at the versions pinned when the session started, so it stays cached; threads use the same one. Your edits, and writes from other sessions, reach a running session as `<plan_updated>` with only the changed sections, on your next message (like side questions). The tutor's own writes are already in its history.
 - **Reps:** the tutor's answer key goes through `set_rep_key` into `session_secrets`; the saved call keeps the key for the model and is stripped from the stream and page loads. `log_rep` appends the Log row, replaces Next and reveals the key. The log grows without limit for now.
-- **Defaults taken (change any):** rep style fixed at start; plan sessions use `toolChoice: 'auto'` and `ask_user` leaves the tool set until its card exists; deleting a plan moves its sessions to Uncategorized; 50MiB per file, drafting reads at most about 100k tokens of material (table of contents and first pages beyond that).
+- **Defaults taken (change any):** rep style fixed at start; plan sessions use `toolChoice: 'auto'` and `ask_user` leaves the tool set until its card exists; deleting a plan moves its sessions to Uncategorized; material capped at 5 files and about 30k tokens per plan.
 
 ### Ask-user cards and quizzes
 
@@ -224,10 +224,10 @@ What to borrow (MIT code can be copied with its license notice):
   - [x] 2.2 Fold `<plan_updated>` (changed sections) into the next learner message; advance `seen`
   - [x] 2.3 `update_doc` tool, chat note on each write, `toolChoice: 'auto'` in plan sessions, `ask_user` out of the tool set; `create_quiz` refuses outside /quiz-me and its calls are hidden from the stream and saved reply
 - Plans, step 3: material
-  - [ ] 3.1 Private Storage bucket, signed uploads, paste; Material tab with the "what goes here" empty state
-  - [ ] 3.2 Text extraction (`unpdf`) with a preview and token count
-  - [ ] 3.3 Material in the wizard draft (capped)
-  - [ ] 3.4 `read_material` tool; multi-step replies (`stopWhen`)
+  - [ ] 3.1 `plan_materials` (write-once, soft delete); private Storage for originals; upload and paste; Material tab with the "what goes here" empty state; caps of 5 files and ~30k tokens
+  - [ ] 3.2 Extraction once at upload: pdf.js text layer, one-time Claude transcription for scanned pages; preview and token count
+  - [ ] 3.3 Material in the system prompt, pinned per session; additions and removals fold into the next learner message
+  - [ ] 3.4 Material in the wizard draft
 - Plans, step 4: training
   - [x] 4.1 `conversations.mode` and `training_style`, fixed at creation; Learn/Train and rep style under the plan composer; mode block in the system prompt
   - [x] 4.2 First training session sets up `training.md` (Method, Rubric) with the learner ("Set up training", or Set up in Files); reps log to Log and Next with `update_doc` until 4.4
