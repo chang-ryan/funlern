@@ -30,6 +30,7 @@ Agreed 2026-10-20. Chat sessions live in a **plan**; chats without one are liste
 - **Tutor writes freely**, one section at a time with `update_doc`, only at natural points (after quiz results, at the end of a rep, when asked). Each write shows a note in the chat and is undoable from history.
 - **Context:** the system prompt is built from the docs at the versions pinned when the session started, so it stays cached; threads use the same one. Your edits, and writes from other sessions, reach a running session as `<plan_updated>` with only the changed sections, on your next message (like side questions). The tutor's own writes are already in its history.
 - **Reps:** the tutor's answer key goes through `set_rep_key` into `session_secrets`; the saved call keeps the key for the model and is stripped from the stream and page loads. `log_rep` appends the Log row, replaces Next and reveals the key. The log grows without limit for now.
+- **Trainer principles (proposed 2026-10-20):** a learner may not know what to rep; working that out is part of the skill, so the tutor helps. Every training session carries a short list of coaching principles distilled from a practice scheme built by hand: measure before teaching, find the one cause behind the misses, small reps with a fixed output and the comfortable dodge ruled out, pass/fail marks decided before reading the answer, assisted kept apart from unaided, progress only on unseen prompts with an exit test per stage, a Log row for every rep, a floor over a schedule, and the learner owns Method and Rubric. Setup asks whether the tutor should design the Method and Rubric itself (from one or two cold attempts, or from the brief) or build them with the learner. Principles first; worked examples only if the principles fall short.
 - **Defaults taken (change any):** rep style fixed at start; plan sessions use `toolChoice: 'auto'` and `ask_user` leaves the tool set until its card exists; deleting a plan moves its sessions to Uncategorized; material capped at 5 files and about 30k tokens per plan.
 
 ### Ask-user cards and quizzes
@@ -231,6 +232,7 @@ What to borrow (MIT code can be copied with its license notice):
 - Plans, step 4: training
   - [x] 4.1 `conversations.mode` and `training_style`, fixed at creation; Learn/Train and rep style under the plan composer; mode block in the system prompt
   - [x] 4.2 First training session sets up `training.md` (Method, Rubric) with the learner ("Set up training", or Set up in Files); reps log to Log and Next with `update_doc` until 4.4
+  - [ ] Trainer principles in every training session; setup offers a tutor-designed or co-designed Method (in review; iterate on real setup sessions)
   - [ ] 4.3 `set_rep_key` and `session_secrets`; key stripped from the stream and page loads
   - [ ] 4.4 `log_rep`: append the Log row, replace Next, reveal the key
 - [ ] `ask_user` tool and card

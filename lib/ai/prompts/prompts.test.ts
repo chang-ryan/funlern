@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TRAINING_SETUP, trainingRep } from './mode'
+import { TRAINING_PRINCIPLES, TRAINING_SETUP, trainingRep } from './mode'
 import { planBlock } from './plan'
 import { SYSTEM_PROMPT } from './system'
 import { planDraftPrompt } from './tasks/plan-draft'
@@ -27,6 +27,7 @@ describe('prompts', () => {
   })
 
   it('training', () => {
+    expect(TRAINING_PRINCIPLES).toMatchSnapshot()
     expect(TRAINING_SETUP).toMatchSnapshot()
     expect(trainingRep('guided')).toMatchSnapshot()
     expect(trainingRep('full')).toMatchSnapshot()

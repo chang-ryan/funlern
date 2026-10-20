@@ -1,6 +1,6 @@
 import type { conversations } from '@/lib/db/schema'
 import { getPlanDocs } from '@/lib/db/plans'
-import { TRAINING_SETUP, trainingRep } from './prompts/mode'
+import { TRAINING_PRINCIPLES, TRAINING_SETUP, trainingRep } from './prompts/mode'
 import { planBlock } from './prompts/plan'
 import { SYSTEM_PROMPT } from './prompts/system'
 import 'server-only'
@@ -18,6 +18,6 @@ export async function systemFor(conversation: Conversation) {
   const docs = await getPlanDocs(conversation.planId, conversation.pinned ?? undefined)
   const parts = [SYSTEM_PROMPT, planBlock(docs)]
   if (conversation.mode === 'training')
-    parts.push(conversation.trainingStyle ? trainingRep(conversation.trainingStyle) : TRAINING_SETUP)
+    parts.push(TRAINING_PRINCIPLES, conversation.trainingStyle ? trainingRep(conversation.trainingStyle) : TRAINING_SETUP)
   return parts.join('\n\n')
 }
