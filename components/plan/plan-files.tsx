@@ -3,8 +3,8 @@ import type { DocKind } from '@/lib/plans/docs'
 import Link from 'next/link'
 import { DOC_FILE, DOC_KINDS } from '@/lib/plans/docs'
 
-// training.md is set up in the first training session (step 4); material comes with uploads (step 3).
-const NOT_YET: Partial<Record<DocKind, string>> = { training: 'Comes with training sessions' }
+// training.md is set up in the plan's first training session; material comes with uploads (step 3).
+const ACTION = 'rounded-lg border border-border px-2 py-0.5 text-xs hover:bg-border disabled:opacity-50 disabled:hover:bg-transparent'
 
 /** The plan's "project files": its docs, then material. A doc opens full page in place of the plan's left side. */
 export function PlanFiles({ planId, docs, active }: { planId: string, docs: PlanDoc[], active?: DocKind }) {
@@ -28,25 +28,29 @@ export function PlanFiles({ planId, docs, active }: { planId: string, docs: Plan
                       <span className="text-xs text-muted">{`v${doc.version}`}</span>
                     </Link>
                   )
-                : <FileRow icon={<DocIcon />} label={<span className="font-mono text-[13px]">{DOC_FILE[kind]}</span>} hint={NOT_YET[kind]} />}
+                : (
+                    <FileRow
+                      icon={<DocIcon />}
+                      label={<span className="font-mono text-[13px]">{DOC_FILE[kind]}</span>}
+                      action={kind === 'training' ? <Link href={`/p/${planId}?mode=training`} className={ACTION}>Set up</Link> : undefined}
+                    />
+                  )}
             </li>
           )
         })}
-        <li><FileRow icon={<MaterialIcon />} label="Material" hint="Uploads are coming soon" /></li>
+        <li><FileRow icon={<MaterialIcon />} label="Material" action={<button type="button" disabled title="Uploads are coming soon" className={ACTION}>Add</button>} /></li>
       </ul>
     </section>
   )
 }
 
-/** A file the plan doesn't have yet, with its (still disabled) Add action. */
-function FileRow({ icon, label, hint }: { icon: React.ReactNode, label: React.ReactNode, hint?: string }) {
+/** A file the plan doesn't have yet, with the action that adds it. */
+function FileRow({ icon, label, action }: { icon: React.ReactNode, label: React.ReactNode, action?: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3 px-3 py-2.5 text-sm text-muted">
       {icon}
       <span className="min-w-0 flex-1 truncate">{label}</span>
-      <button type="button" disabled title={hint} className="rounded-lg border border-border px-2 py-0.5 text-xs disabled:opacity-50">
-        Add
-      </button>
+      {action}
     </div>
   )
 }

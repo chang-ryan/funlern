@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { renameConversation } from '@/app/actions'
+import { UNTITLED_PLAN } from './plan/format'
 
 const UNTITLED = 'Untitled conversation'
 
@@ -10,12 +11,14 @@ const UNTITLED = 'Untitled conversation'
  * Top bar: sidebar toggle (placeholder until the drawer exists), home link, and the title, which turns into a
  * text field on click. A chat that isn't saved yet has nothing to rename, so its title is plain text.
  */
-export function ConversationHeader({ id, title, setTitle, saved }: {
+export function ConversationHeader({ id, title, setTitle, saved, plan }: {
   id: string
   /** Held by the conversation, which also receives the generated title. */
   title: string | null
   setTitle: (title: string | null) => void
   saved: boolean
+  /** Shown between home and the title, linking back to the plan. */
+  plan?: { id: string, title: string | null }
 }) {
   const [editing, setEditing] = useState(false)
 
@@ -41,6 +44,14 @@ export function ConversationHeader({ id, title, setTitle, saved }: {
       </button>
       <Link href="/" className="rounded-lg px-2 py-1.5 text-muted hover:bg-tutor hover:text-foreground">funlern</Link>
       <span aria-hidden className="text-muted/60">/</span>
+      {plan && (
+        <>
+          <Link href={`/p/${plan.id}`} className="min-w-0 max-w-[40%] truncate rounded-lg px-2 py-1.5 text-muted hover:bg-tutor hover:text-foreground">
+            {plan.title ?? UNTITLED_PLAN}
+          </Link>
+          <span aria-hidden className="text-muted/60">/</span>
+        </>
+      )}
 
       {!saved
         ? <span className="px-2 py-1.5 text-muted">New chat</span>

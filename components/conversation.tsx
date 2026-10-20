@@ -4,6 +4,7 @@ import type { UIMessage } from 'ai'
 import type { RailItem } from './thread-rail'
 import type { ThreadData } from './types'
 import type { Anchor } from '@/lib/db/schema'
+import type { SessionStart } from '@/lib/plans/modes'
 import { Chat, useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
@@ -41,15 +42,17 @@ const chatTransport = transportFor('/api/chat')
 const threadTransport = transportFor('/api/thread')
 
 /** Persisted conversation with side threads anchored on highlighted passages. */
-export function Conversation({ id, isNew = false, planId, firstMessage, title, model, initialMessages, initialThreads }: {
+export function Conversation({ id, isNew = false, start, firstMessage, title, plan, model, initialMessages, initialThreads }: {
   id: string
   /** Not saved yet: the server creates it with the first message, then the URL becomes /c/{id}. */
   isNew?: boolean
-  /** A new session in this plan: sent with the first message, which creates it there. */
-  planId?: string
+  /** How a new session starts (its plan and mode): sent with the first message, which creates it. */
+  start?: SessionStart
   /** Sent as soon as the conversation mounts, e.g. typed on the plan page. */
   firstMessage?: string
   title: string | null
+  /** The plan the session is in, for the breadcrumb. */
+  plan?: { id: string, title: string | null }
   model: string
   initialMessages: UIMessage[]
   initialThreads: ThreadData[]
@@ -104,8 +107,8 @@ export function Conversation({ id, isNew = false, planId, firstMessage, title, m
   const lastResults = messages.at(-1) && quizResultsOf(messages.at(-1)!)
   const endingQuiz = status === 'submitted' ? lastResults?.quizId : undefined
 
-  // Only a new chat's first message carries the plan; the server ignores it once the conversation exists.
-  const send = (text: string) => sendMessage({ text }, isNew && planId ? { body: { planId } } : undefined)
+  // Only a new chat's first message carries how it starts; the server ignores it once the conversation exists.
+  const send = (text: string) => sendMessage({ text }, isNew && start ? { body: { start } } : undefined)
   const sentFirstRef = useRef(false)
   useEffect(() => {
     if (!firstMessage || sentFirstRef.current)
@@ -113,10 +116,10 @@ export function Conversation({ id, isNew = false, planId, firstMessage, title, m
     // Deferred: in dev, StrictMode's extra cleanup runs useChat's stop(), which would abort a send made now.
     const timer = setTimeout(() => {
       sentFirstRef.current = true
-      sendMessage({ text: firstMessage }, planId ? { body: { planId } } : undefined)
+      sendMessage({ text: firstMessage }, start ? { body: { start } } : undefined)
     })
     return () => clearTimeout(timer)
-  }, [firstMessage, planId, sendMessage])
+  }, [firstMessage, start, sendMessage])
 
   // A reply arriving means the server has saved the conversation; give it its real URL.
   const saved = !isNew || messages.some(m => m.role === 'assistant')
@@ -298,7 +301,7 @@ export function Conversation({ id, isNew = false, planId, firstMessage, title, m
       onRetry={() => regenerate()}
       model={model}
       transcriptRef={transcriptRef}
-      header={<ConversationHeader id={id} title={currentTitle} setTitle={setCurrentTitle} saved={saved} />}
+      header={<ConversationHeader id={id} title={currentTitle} setTitle={setCurrentTitle} saved={saved} plan={plan} />}
       onTranscriptClick={onTranscriptClick}
       onTranscriptPointerMove={onTranscriptPointerMove}
       renderTutor={(m, _i, streaming) => (

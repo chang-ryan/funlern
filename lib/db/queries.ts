@@ -1,5 +1,6 @@
 import type { UIMessage } from 'ai'
 import type { MessageMetadata } from './schema'
+import type { SessionStart } from '@/lib/plans/modes'
 import { and, asc, desc, eq, gte, inArray, isNull, lte, max, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '.'
@@ -28,18 +29,22 @@ export async function getConversation(userId: string, id: string) {
 /**
  * A new chat has no row until its first message, so backing out of an empty chat leaves nothing behind.
  * The client picks the id; one that is malformed or belongs to someone else comes back null. A new
- * session in a plan pins the plan's current docs; a plan that isn't the learner's is refused.
+ * session in a plan pins the plan's current docs; a plan that isn't the learner's is refused. Training
+ * needs a plan; until the plan has training.md, a training session sets it up and has no style.
  */
-export async function getOrStartConversation(userId: string, id: string, planId?: string) {
+export async function getOrStartConversation(userId: string, id: string, start: SessionStart = {}) {
   if (!z.uuid().safeParse(id).success)
     return null
   const existing = await getConversation(userId, id)
   if (existing)
     return existing
+  const { planId } = start
   if (planId && !await getPlan(userId, planId))
     return null
   const versions = planId ? await latestVersions(planId) : null
-  await db.insert(conversations).values({ id, userId, planId, pinned: versions, seen: versions }).onConflictDoNothing()
+  const mode = planId && start.mode === 'training' ? 'training' : 'learning'
+  const trainingStyle = mode === 'training' && versions?.training ? (start.style ?? 'guided') : null
+  await db.insert(conversations).values({ id, userId, planId, mode, trainingStyle, pinned: versions, seen: versions }).onConflictDoNothing()
   return getConversation(userId, id)
 }
 

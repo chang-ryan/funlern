@@ -49,10 +49,10 @@ export const createQuiz = tool({
  * ./index.ts). Only plan sessions can call it.
  */
 export const updateDoc = tool({
-  description: 'Rewrite one section of the learner\'s plan doc, e.g. tick off a unit in syllabus.md. Only at natural points: after quiz results, when a unit is done, or when the learner asks. The whole section is replaced, so include everything that should stay.',
+  description: 'Rewrite one section of the learner\'s plan doc, e.g. tick off a unit in syllabus.md or add a rep to training.md\'s Log. Only at natural points: after quiz results, when a unit or rep is done, or when the learner asks. The whole section is replaced, so include everything that should stay. training.md is written only in training sessions.',
   inputSchema: z.object({
-    doc: z.enum(['brief', 'syllabus']).describe('brief.md or syllabus.md'),
-    section: z.enum(['Goal', 'Why', 'Level', 'Seriousness', 'Constraints', 'Units', 'Notes']).describe('brief: Goal, Why, Level, Seriousness, Constraints. syllabus: Units, Notes'),
+    doc: z.enum(['brief', 'syllabus', 'training']).describe('brief.md, syllabus.md or training.md'),
+    section: z.enum(['Goal', 'Why', 'Level', 'Seriousness', 'Constraints', 'Units', 'Notes', 'Method', 'Rubric', 'Log', 'Next']).describe('brief: Goal, Why, Level, Seriousness, Constraints. syllabus: Units, Notes. training: Method, Rubric, Log, Next'),
     content: z.string().max(8000).describe('The new Markdown for the section, without its heading'),
     summary: z.string().max(100).describe('What changed, in a few words, e.g. "Marked closures done"'),
   }),
