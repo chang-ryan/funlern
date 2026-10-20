@@ -214,15 +214,15 @@ What to borrow (MIT code can be copied with its license notice):
 
 ### M1 MVP
 - Plans, step 1: plans and docs
-  - [ ] 1.1 Schema: `plans`, `plan_docs`, `plan_doc_versions`; `conversations.plan_id`, `pinned`, `seen`
-  - [ ] 1.2 Doc templates (fixed headings) and `systemFor(conversation)` in the chat and thread routes; prompt snapshots
-  - [ ] 1.3 Wizard `/plans/new` (no material yet): one streamed draft call writes the title, brief v1 and syllabus v1
-  - [ ] 1.4 Plan page `/p/[id]`: sessions list, New learning session, read-only docs drawer; home lists plans, then Uncategorized
-  - [ ] 1.5 Move an Uncategorized chat into a plan
+  - [x] 1.1 Schema: `plans`, `plan_docs`, `plan_doc_versions`; `conversations.plan_id`, `pinned`, `seen`
+  - [x] 1.2 Doc templates (fixed headings) and `systemFor(conversation)` in the chat and thread routes; prompt snapshots
+  - [x] 1.3 Wizard `/plans/new` (no material yet): one streamed draft call writes the title, brief v1 and syllabus v1
+  - [x] 1.4 Plan page `/p/[id]`: sessions list, New learning session, read-only docs drawer; home lists plans, then Uncategorized
+  - [ ] 1.5 Move an Uncategorized chat into a plan (server action `movePlanSession` done; no UI yet)
 - Plans, step 2: tutor writes and folding
-  - [ ] 2.1 Drawer editing per section, version history, restore
-  - [ ] 2.2 Fold `<plan_updated>` (changed sections) into the next learner message; advance `seen`
-  - [ ] 2.3 `update_doc` tool, chat note on each write, `toolChoice: 'auto'` in plan sessions, `ask_user` out of the tool set
+  - [x] 2.1 Drawer editing per section, version history, restore
+  - [x] 2.2 Fold `<plan_updated>` (changed sections) into the next learner message; advance `seen`
+  - [x] 2.3 `update_doc` tool, chat note on each write, `toolChoice: 'auto'` in plan sessions, `ask_user` out of the tool set; `create_quiz` refuses outside /quiz-me and its calls are hidden from the stream and saved reply
 - Plans, step 3: material
   - [ ] 3.1 Private Storage bucket, signed uploads, paste; Material tab with the "what goes here" empty state
   - [ ] 3.2 Text extraction (`unpdf`) with a preview and token count
@@ -241,7 +241,7 @@ What to borrow (MIT code can be copied with its license notice):
 - [x] `/quiz-me`: the model must call `create_quiz` (server tool, thinking off for that call); its execute saves `quizzes` + `quiz_questions` (choices shuffled) scoped to the request's user and conversation. The saved/streamed card keeps questions and choices only. The card grades each pick through a server action (`quiz_answers`), resumes after reload, and ends with Finish or Exit; ending sends a learner message whose results the server rebuilds from the database, and the tutor reviews (misses and skips explained, takeaways if all right). The main chat is blocked (client and server) while a quiz is active; threads are not
 - [ ] `/create-study-guide` (reaches the tutor as plain text for now)
 - [ ] Quiz: other answer types (free text graded by the model); a check on the model's answer key (or a "this answer is wrong" button); rate limit /quiz-me
-- [ ] Push the `quizzes` migration to hosted (`pnpm db:push`)
+- [ ] Push the `quizzes` and `plans` migrations to hosted (`pnpm db:push`)
 - [x] New chats are saved on the first message (`/new`, id picked client-side); backing out of an empty chat leaves no row
 - [x] Tutor copy button shows on hover (always on touch); scroll-to-bottom arrow fades in and out (200ms)
 - [x] Model picker under the chat bar: Haiku 5.5 / Sonnet 5.5, saved in a cookie that main, thread and scratch routes read
