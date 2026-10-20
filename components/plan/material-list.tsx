@@ -77,7 +77,7 @@ export function MaterialList({ planId, items }: { planId: string, items: Item[] 
           What you&apos;re studying from: a course syllabus or curriculum, prep docs, past questions you were asked, your notes. Training for interviews? Add your resume and the stories you&apos;d tell. The tutor reads all of it in every session of this plan.
         </p>
         <p className="text-xs text-muted">
-          {`${items.length} of ${MATERIAL_LIMITS.files} files · about ${used.toLocaleString()} of ${MATERIAL_LIMITS.tokens.toLocaleString()} tokens · PDFs up to ${MATERIAL_LIMITS.pages} pages. Files can't be edited: delete one and add another to change it.`}
+          {`${items.length} of ${MATERIAL_LIMITS.files} files · about ${used.toLocaleString()} of ${MATERIAL_LIMITS.tokens.toLocaleString()} tokens · files up to ${MATERIAL_LIMITS.bytes / 1024 / 1024}MB. Files can't be edited: delete one and add another to change it.`}
         </p>
       </header>
 

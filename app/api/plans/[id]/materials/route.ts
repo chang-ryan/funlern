@@ -2,7 +2,7 @@ import type { MaterialKind } from '@/lib/plans/material'
 import { revalidatePath } from 'next/cache'
 import { getActiveMaterials, insertMaterial } from '@/lib/db/materials'
 import { getPlan } from '@/lib/db/plans'
-import { countPages, extractPdf } from '@/lib/material/extract'
+import { ExtractError, extractPdf } from '@/lib/material/extract'
 import { estimateTokens, MATERIAL_LIMITS, materialRefusal } from '@/lib/plans/material'
 import { createAdminClient, MATERIALS_BUCKET } from '@/lib/supabase/admin'
 import { getUserId } from '@/lib/supabase/server'
@@ -51,17 +51,16 @@ export async function POST(req: Request, { params }: RouteContext<'/api/plans/[i
   let text: string
   let pages: number | null = null
   if (kind === 'pdf') {
+    // Refuse a sixth file before paying for extraction; the token budget is checked once the text is known.
+    const full = materialRefusal(current, { tokens: 0 })
+    if (full)
+      return refuse(full)
     try {
-      pages = await countPages(bytes)
+      ({ text, pages } = await extractPdf(bytes))
     }
-    catch {
-      return refuse('That PDF couldn\'t be read.', 400)
+    catch (error) {
+      return refuse(error instanceof ExtractError ? error.message : 'That PDF couldn\'t be read.', error instanceof ExtractError ? 422 : 400)
     }
-    // Check the page limit before paying for extraction.
-    const early = materialRefusal(current, { tokens: 0, pages })
-    if (early)
-      return refuse(early)
-    text = (await extractPdf(bytes)).text
   }
   else {
     text = new TextDecoder().decode(bytes).trim()
@@ -69,7 +68,7 @@ export async function POST(req: Request, { params }: RouteContext<'/api/plans/[i
   if (!text)
     return refuse('No text could be read from that file.')
   const tokens = estimateTokens(text)
-  const refusal = materialRefusal(current, { tokens, pages })
+  const refusal = materialRefusal(current, { tokens })
   if (refusal)
     return refuse(refusal)
 

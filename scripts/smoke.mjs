@@ -262,10 +262,9 @@ try {
   assert.equal(await stored(md.storage_path), 1)
   const scan = await upload('scan.pdf', 'application/pdf', pdfWithPages(['The examiner opens with the weather.', '']))
   assert.match(scan.text, /weather/i, 'a page with no text sends the PDF to Claude to transcribe')
-  const tooLong = new FormData()
-  tooLong.set('file', new File([pdfWithPages(Array.from({ length: 6 }, (_, i) => `Page ${i + 1} of a long handout.`))], 'long.pdf', { type: 'application/pdf' }))
-  assert.equal((await fetch(`${APP}/api/plans/${plan.id}/materials`, { method: 'POST', headers: { cookie }, body: tooLong })).status, 422, 'a 6-page PDF is refused')
-  step('upload', 'PDF text layer and Markdown stored once with originals in Storage; image-only page transcribed; 6 pages refused')
+  const long = await upload('long.pdf', 'application/pdf', pdfWithPages(Array.from({ length: 12 }, (_, i) => `Page ${i + 1} of a long handout.`)))
+  assert.equal(long.pages, 12, 'no page limit, only size and tokens')
+  step('upload', 'PDF text layer and Markdown stored once with originals in Storage; image-only page transcribed; a 12-page PDF accepted')
 }
 finally {
   // Uploaded originals live in Storage, which deleting the user doesn't reach.

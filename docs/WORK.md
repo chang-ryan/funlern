@@ -224,7 +224,7 @@ What to borrow (MIT code can be copied with its license notice):
   - [x] 2.2 Fold `<plan_updated>` (changed sections) into the next learner message; advance `seen`
   - [x] 2.3 `update_doc` tool, chat note on each write, `toolChoice: 'auto'` in plan sessions, `ask_user` out of the tool set; `create_quiz` refuses outside /quiz-me and its calls are hidden from the stream and saved reply
 - Plans, step 3: material
-  - [x] 3.1 `plan_materials` (write-once, soft delete); private Storage for originals; upload and paste; Material page with the "what goes here" copy; caps of 5 files, 5 pages per PDF and ~30k tokens
+  - [x] 3.1 `plan_materials` (write-once, soft delete); private Storage for originals; upload and paste; Material page with the "what goes here" copy; caps of 5 files, 10MB per file and ~30k tokens (no page limit; transcription up to 100 pages)
   - [x] 3.2 Extraction once at upload: pdf.js text layer, one-time Claude transcription when any page has no text; preview and token count
   - [x] 3.3 Material in the system prompt, pinned per session; additions and removals fold into the next learner message
   - [ ] 3.4 Material in the wizard draft

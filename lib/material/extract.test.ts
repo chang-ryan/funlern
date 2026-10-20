@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('server-only', () => ({}))
 
-const { countPages, extractPdf } = await import('./extract')
+const { extractPdf } = await import('./extract')
 
 /** A minimal PDF with one Helvetica text line per page, so the text layer can be read without fixtures. */
 function pdfWithPages(lines: string[]) {
@@ -33,7 +33,6 @@ function pdfWithPages(lines: string[]) {
 describe('extractPdf', () => {
   it('reads the text layer page by page, without calling a model', async () => {
     const pdf = pdfWithPages(['A closure is a function bundled with its lexical environment.', 'Closures capture variables, not values, in JavaScript.'])
-    expect(await countPages(pdf)).toBe(2)
     const { text, pages, transcribed } = await extractPdf(pdf)
     expect({ pages, transcribed }).toEqual({ pages: 2, transcribed: false })
     expect(text).toMatch(/^\[page 1\]\n\nA closure is a function/)
