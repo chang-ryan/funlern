@@ -154,6 +154,23 @@ try {
   const [after] = await sql`select pinned, seen from conversations where id = ${ps.id}`
   assert.deepEqual([after.pinned, after.seen], [{ brief: 1 }, { brief: 2 }], 'pinned stays, seen advances')
   step('plan update', `edit folded into the next message; tutor answered "${textOf(edited).trim()}"`)
+
+  // The tutor writes a doc section with update_doc, then keeps talking; the write doesn't come back as a fold.
+  const [syl] = await sql`insert into plan_docs (plan_id, kind) values (${plan.id}, 'syllabus') returning id`
+  await sql`insert into plan_doc_versions (doc_id, version, body, author) values (${syl.id}, 1, '## Units\n\n- [ ] Vowels\n- [ ] Mutations\n\n## Notes\n', 'tutor')`
+  const ws = { id: crypto.randomUUID() }
+  const wrote = await post('/api/chat', { id: ws.id, planId: plan.id, message: say('I have finished the Vowels unit. Please tick it off in my syllabus, then say "done".') })
+  assert.ok(wrote.includes('"toolName":"update_doc"'), 'tutor called update_doc')
+  assert.ok(textOf(wrote).trim(), 'tutor kept writing after the tool call')
+  await until(async () => await count(sql`select count(*)::int from messages where conversation_id = ${ws.id}`) === 2)
+  const [v2] = await sql`select body, author, conversation_id from plan_doc_versions where doc_id = ${syl.id} and version = 2`
+  assert.equal(v2.author, 'tutor')
+  assert.equal(v2.conversation_id, ws.id)
+  assert.match(v2.body, /- \[x\] Vowels/)
+  assert.match(v2.body, /- \[ \] Mutations/, 'the rest of the section stays')
+  assert.equal((await sql`select seen from conversations where id = ${ws.id}`)[0].seen.syllabus, 2, 'its own write counts as seen')
+  assert.ok(!(await post('/api/chat', { id: ws.id, message: say('thanks') })).includes('"type":"data-plan-updated"'), 'own write is not folded back')
+  step('doc write', 'update_doc ticked Vowels as version 2; tutor went on; not folded back to itself')
 }
 finally {
   await sql`delete from auth.users where email = ${email}`

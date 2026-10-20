@@ -1,6 +1,7 @@
 import type { TextStreamPart, ToolSet, UIMessage } from 'ai'
 import { generateId, readUIMessageStream, toUIMessageStream } from 'ai'
 import { after } from 'next/server'
+import { hideTools } from './hide-tools'
 import { stampFinish } from './turn'
 
 /** Sends each reply's finish reason to the client, and into the saved message, as metadata. */
@@ -16,7 +17,7 @@ export function finishMetadata({ part }: { part: TextStreamPart<ToolSet> }) {
 async function collectReply(stream: ReadableStream<TextStreamPart<ToolSet>>, id: string): Promise<UIMessage | undefined> {
   let reply: UIMessage | undefined
   try {
-    const uiStream = toUIMessageStream({ stream, generateMessageId: () => id, messageMetadata: finishMetadata })
+    const uiStream = hideTools(toUIMessageStream({ stream, generateMessageId: () => id, messageMetadata: finishMetadata }))
     for await (const message of readUIMessageStream({ stream: uiStream }))
       reply = message
   }

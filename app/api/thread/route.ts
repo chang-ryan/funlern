@@ -1,12 +1,13 @@
 import type { UIMessage } from 'ai'
-import { createUIMessageStreamResponse, streamText, toUIMessageStream, validateUIMessages } from 'ai'
+import { createUIMessageStreamResponse, stepCountIs, streamText, toUIMessageStream, validateUIMessages } from 'ai'
 import { markCacheBreakpoint } from '@/lib/ai/cache'
+import { hideTools } from '@/lib/ai/hide-tools'
 import { toModelMessages } from '@/lib/ai/messages'
 import { currentModel } from '@/lib/ai/model'
 import { threadFrame } from '@/lib/ai/prompts/turn'
 import { finishMetadata, saveReplyWhenDone } from '@/lib/ai/reply'
 import { systemFor } from '@/lib/ai/system'
-import { TOOL_CHOICE, toolsFor } from '@/lib/ai/tools'
+import { toolChoiceFor, toolsFor } from '@/lib/ai/tools'
 import { placeTurn } from '@/lib/ai/turn'
 import { deleteThreadMessagesFrom, getConversation, getMessages, getThread, getThreadMessages, saveThreadMessages } from '@/lib/db/queries'
 import { textOf } from '@/lib/messages'
@@ -42,19 +43,20 @@ export async function POST(req: Request) {
     model: await currentModel(),
     // Same system prompt as main, so the frozen prefix reuses main's cache.
     system: await systemFor(convo!),
-    tools: toolsFor({ userId, conversationId: t.conversationId }),
-    toolChoice: TOOL_CHOICE,
+    tools: toolsFor({ userId, conversationId: t.conversationId, planId: convo!.planId }),
+    toolChoice: toolChoiceFor(convo!),
+    stopWhen: stepCountIs(4),
     // Breakpoint 1 reuses main's cache; breakpoint 2 caches this thread for its next reply.
     messages: markCacheBreakpoint(markCacheBreakpoint([...prefix, ...own], prefix.length - 1), prefix.length + own.length - 1),
   })
   const replyId = saveReplyWhenDone(result.stream, reply => saveThreadMessages(id, [...threadMessages, reply]))
 
   return createUIMessageStreamResponse({
-    stream: toUIMessageStream({
+    stream: hideTools(toUIMessageStream({
       stream: result.stream,
       originalMessages: threadMessages,
       generateMessageId: () => replyId,
       messageMetadata: finishMetadata,
-    }),
+    })),
   })
 }

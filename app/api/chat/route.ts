@@ -1,14 +1,15 @@
 import type { UIMessage, UIMessageStreamWriter } from 'ai'
-import { createUIMessageStream, createUIMessageStreamResponse, generateId, generateText, streamText, toUIMessageStream, validateUIMessages } from 'ai'
+import { createUIMessageStream, createUIMessageStreamResponse, generateId, generateText, stepCountIs, streamText, toUIMessageStream, validateUIMessages } from 'ai'
 import { after } from 'next/server'
 import { markCacheBreakpoint } from '@/lib/ai/cache'
 import { parseCommand } from '@/lib/ai/commands'
+import { hideTools } from '@/lib/ai/hide-tools'
 import { toModelMessages } from '@/lib/ai/messages'
 import { currentModel } from '@/lib/ai/model'
 import { finishMetadata, saveReplyWhenDone } from '@/lib/ai/reply'
 import { systemFor } from '@/lib/ai/system'
 import { titleConversation } from '@/lib/ai/title'
-import { TOOL_CHOICE, toolsFor } from '@/lib/ai/tools'
+import { toolChoiceFor, toolsFor } from '@/lib/ai/tools'
 import { placeTurn } from '@/lib/ai/turn'
 import { foldPlanUpdates, setSeen } from '@/lib/db/plans'
 import { deleteMessagesFrom, getMessages, getOrStartConversation, getThreadsWithMessages, saveMessages, setFoldedThrough } from '@/lib/db/queries'
@@ -87,13 +88,13 @@ export async function POST(req: Request) {
   if (title)
     after(title)
 
-  const ctx = { userId, conversationId: id, title, system: await systemFor(convo) }
+  const ctx = { userId, conversationId: id, planId: convo.planId, title, system: await systemFor(convo) }
   if (parseCommand(outgoing)?.name === 'quiz-me')
     return quizReply(ctx, messages)
   return reply(ctx, messages)
 }
 
-interface Ctx { userId: string, conversationId: string, system: string, title?: Promise<string | null> }
+interface Ctx { userId: string, conversationId: string, planId: string | null, system: string, title?: Promise<string | null> }
 
 /** Streams the tutor's reply and saves it. */
 async function reply(ctx: Ctx, messages: UIMessage[]) {
@@ -102,13 +103,15 @@ async function reply(ctx: Ctx, messages: UIMessage[]) {
     model: await currentModel(),
     system: ctx.system,
     tools: toolsFor(ctx),
-    toolChoice: TOOL_CHOICE,
+    toolChoice: toolChoiceFor(ctx),
+    // A tool call (update_doc) is a step; the tutor goes on writing after it.
+    stopWhen: stepCountIs(4),
     messages: markCacheBreakpoint(modelMessages, modelMessages.length - 1),
   })
   const replyId = saveReplyWhenDone(result.stream, r => saveMessages(ctx.conversationId, [...messages, r]))
 
   return respond(ctx, messages, replyId, (writer) => {
-    writer.merge(toUIMessageStream({ stream: result.stream, sendStart: false, messageMetadata: finishMetadata }))
+    writer.merge(hideTools(toUIMessageStream({ stream: result.stream, sendStart: false, messageMetadata: finishMetadata })))
   })
 }
 
@@ -125,7 +128,7 @@ async function quizReply(ctx: Ctx, messages: UIMessage[]) {
     const result = await generateText({
       model: await currentModel(),
       system: ctx.system,
-      tools: toolsFor(ctx),
+      tools: toolsFor({ ...ctx, quiz: true }),
       toolChoice: { type: 'tool', toolName: 'create_quiz' },
       messages: markCacheBreakpoint(modelMessages, modelMessages.length - 1),
       // Forcing a tool call doesn't work with thinking on.

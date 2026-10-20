@@ -43,3 +43,20 @@ export const createQuiz = tool({
     quizId: z.string().describe('Id of the saved quiz'),
   }),
 })
+
+/**
+ * Server tool: rewrites one section of a plan doc as a new version (the execute is bound per request in
+ * ./index.ts). Only plan sessions can call it.
+ */
+export const updateDoc = tool({
+  description: 'Rewrite one section of the learner\'s plan doc, e.g. tick off a unit in syllabus.md. Only at natural points: after quiz results, when a unit is done, or when the learner asks. The whole section is replaced, so include everything that should stay.',
+  inputSchema: z.object({
+    doc: z.enum(['brief', 'syllabus']).describe('brief.md or syllabus.md'),
+    section: z.enum(['Goal', 'Why', 'Level', 'Seriousness', 'Constraints', 'Units', 'Notes']).describe('brief: Goal, Why, Level, Seriousness, Constraints. syllabus: Units, Notes'),
+    content: z.string().max(8000).describe('The new Markdown for the section, without its heading'),
+    summary: z.string().max(100).describe('What changed, in a few words, e.g. "Marked closures done"'),
+  }),
+  outputSchema: z.object({
+    version: z.number().describe('The doc\'s new version'),
+  }),
+})

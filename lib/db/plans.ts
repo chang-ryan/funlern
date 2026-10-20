@@ -1,7 +1,8 @@
 import type { DocVersions } from './schema'
 import type { DocKind } from '@/lib/plans/docs'
 import type { PlanUpdate } from '@/lib/plans/updates'
-import { and, desc, eq, isNull, max } from 'drizzle-orm'
+import { and, desc, eq, isNull, max, sql } from 'drizzle-orm'
+import { DOC_FILE, DOC_SECTIONS, parseDoc, renderDoc } from '@/lib/plans/docs'
 import { changedSections } from '@/lib/plans/updates'
 import { db } from '.'
 import { conversations, planDocs, planDocVersions, plans } from './schema'
@@ -142,6 +143,23 @@ export async function foldPlanUpdates(planId: string, seen: DocVersions): Promis
       docs.push({ kind, version, sections })
   }
   return { data: docs.length ? { docs } : null, seen: { ...seen, ...latest } }
+}
+
+/**
+ * The tutor's update_doc: replaces one section of the current version as a new version. The writing session's
+ * `seen` moves to it only if the tutor had seen the version it wrote on; otherwise the next fold still sends
+ * the edits it missed.
+ */
+export async function updatePlanDoc(input: { planId: string, conversationId: string, doc: DocKind, section: string, content: string, summary: string }) {
+  if (!(DOC_SECTIONS[input.doc] as readonly string[]).includes(input.section))
+    throw new Error(`${DOC_FILE[input.doc]} has no section "${input.section}". Its sections: ${DOC_SECTIONS[input.doc].join(', ')}.`)
+  const current = (await getPlanDocs(input.planId)).find(d => d.kind === input.doc)
+  const body = renderDoc(input.doc, { ...parseDoc(input.doc, current?.body ?? ''), [input.section]: input.content })
+  const version = await writeDocVersion({ planId: input.planId, kind: input.doc, body, author: 'tutor', conversationId: input.conversationId, summary: input.summary })
+  await db.update(conversations)
+    .set({ seen: sql`coalesce(${conversations.seen}, '{}'::jsonb) || jsonb_build_object(${input.doc}::text, ${version}::int)` })
+    .where(and(eq(conversations.id, input.conversationId), sql`coalesce((${conversations.seen} ->> ${input.doc}::text)::int, 0) = ${current?.version ?? 0}`))
+  return version
 }
 
 export async function setSeen(conversationId: string, seen: DocVersions) {
