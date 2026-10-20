@@ -219,6 +219,7 @@ What to borrow (MIT code can be copied with its license notice):
   - [x] 1.3 Wizard `/plans/new` (no material yet): one streamed draft call writes the title, brief v1 and syllabus v1
   - [x] 1.4 Plan page `/p/[id]`: sessions list, New learning session, read-only docs drawer; home lists plans, then Uncategorized
   - [ ] 1.5 Move an Uncategorized chat into a plan (server action `movePlanSession` done; no UI yet)
+  - [ ] 1.6 Index page like Claude's Projects: plan cards in a grid (title, date) with New plan; Uncategorized chats listed below with New chat
 - Plans, step 2: tutor writes and folding
   - [x] 2.1 Drawer editing per section, version history, restore
   - [x] 2.2 Fold `<plan_updated>` (changed sections) into the next learner message; advance `seen`
