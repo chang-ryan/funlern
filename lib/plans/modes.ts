@@ -1,6 +1,6 @@
 // A plan session is for learning or for training, fixed when it starts. Client-safe: the plan page picks one.
 
-export const SESSION_MODES = ['learning', 'training'] as const
+export const SESSION_MODES = ['learning', 'training', 'mission'] as const
 export type SessionMode = (typeof SESSION_MODES)[number]
 
 export const TRAINING_STYLES = ['guided', 'full', 'card'] as const
@@ -21,5 +21,7 @@ export interface SessionStart { planId?: string, mode?: SessionMode, style?: Tra
 export function sessionLabel(mode: SessionMode, style: TrainingStyle | null) {
   if (mode === 'learning')
     return undefined
+  if (mode === 'mission')
+    return 'Mission control'
   return style ? `Training · ${TRAINING_STYLE_LABEL[style]}` : 'Training setup'
 }

@@ -64,6 +64,20 @@
       "when": 1792528222565,
       "tag": "20261020203022_plan_materials",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792536599677,
+      "tag": "20261020224959_mission_mode",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792536609875,
+      "tag": "20261020225009_mission_session",
+      "breakpoints": true
     }
   ]
 }

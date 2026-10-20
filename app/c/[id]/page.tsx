@@ -13,6 +13,9 @@ export default async function ConversationPage({ params }: PageProps<'/c/[id]'>)
   const convo = await getConversation(userId, id)
   if (!convo)
     notFound()
+  // Mission control always lives on its plan's page.
+  if (convo.mode === 'mission' && convo.planId)
+    redirect(`/p/${convo.planId}/mc`)
 
   const [messages, threads, plan] = await Promise.all([getMessages(id), getThreads(id), convo.planId ? getPlan(userId, convo.planId) : null])
   const threadsWithMessages = await Promise.all(threads.map(async t => ({ ...t, messages: await getThreadMessages(t.id) })))

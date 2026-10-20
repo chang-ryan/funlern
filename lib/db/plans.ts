@@ -1,7 +1,7 @@
 import type { DocVersions } from './schema'
 import type { DocKind } from '@/lib/plans/docs'
 import type { PlanUpdate } from '@/lib/plans/updates'
-import { and, desc, eq, isNull, max, sql } from 'drizzle-orm'
+import { and, desc, eq, isNull, max, ne, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { DOC_FILE, DOC_SECTIONS, parseDoc, renderDoc } from '@/lib/plans/docs'
 import { changedSections } from '@/lib/plans/updates'
@@ -51,8 +51,15 @@ export async function renamePlan(userId: string, planId: string, title: string |
 }
 
 /** A plan's sessions, newest first. */
+/** A plan's learning and training sessions, newest first; mission control is reached on its own. */
 export async function getPlanSessions(userId: string, planId: string) {
-  return db.select().from(conversations).where(and(eq(conversations.userId, userId), eq(conversations.planId, planId))).orderBy(desc(conversations.createdAt))
+  return db.select().from(conversations).where(and(eq(conversations.userId, userId), eq(conversations.planId, planId), ne(conversations.mode, 'mission'))).orderBy(desc(conversations.createdAt))
+}
+
+/** The plan's mission control session, or null before its first message. */
+export async function getMissionSession(userId: string, planId: string) {
+  const [row] = await db.select().from(conversations).where(and(eq(conversations.userId, userId), eq(conversations.planId, planId), eq(conversations.mode, 'mission'))).limit(1)
+  return row ?? null
 }
 
 /** Sessions with no plan, newest first. */

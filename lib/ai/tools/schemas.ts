@@ -49,7 +49,7 @@ export const createQuiz = tool({
  * ./index.ts). Only plan sessions can call it.
  */
 export const updateDoc = tool({
-  description: 'Rewrite one section of the learner\'s plan doc, e.g. tick off a unit in syllabus.md or add a rep to training.md\'s Log. Only at natural points: after quiz results, when a unit or rep is done, or when the learner asks. The whole section is replaced, so include everything that should stay. training.md is written only in training sessions.',
+  description: 'Rewrite one section of the learner\'s plan doc, e.g. tick off a unit in syllabus.md or add a rep to training.md\'s Log. Only at natural points: after quiz results, when a unit or rep is done, or when the learner asks. The whole section is replaced, so include everything that should stay. training.md is written only in training sessions and mission control.',
   inputSchema: z.object({
     doc: z.enum(['brief', 'syllabus', 'training']).describe('brief.md, syllabus.md or training.md'),
     section: z.enum(['Goal', 'Why', 'Level', 'Seriousness', 'Constraints', 'Units', 'Notes', 'Method', 'Rubric', 'Log', 'Next']).describe('brief: Goal, Why, Level, Seriousness, Constraints. syllabus: Units, Notes. training: Method, Rubric, Log, Next'),

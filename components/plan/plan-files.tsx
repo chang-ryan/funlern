@@ -3,20 +3,23 @@ import type { DocKind } from '@/lib/plans/docs'
 import Link from 'next/link'
 import { DOC_FILE, DOC_KINDS } from '@/lib/plans/docs'
 
-// training.md is set up in the plan's first training session.
+// training.md is set up in mission control.
 const ACTION = 'rounded-lg border border-border px-2 py-0.5 text-xs hover:bg-border disabled:opacity-50 disabled:hover:bg-transparent'
 
-/** The plan's "project files": its docs, then material. A doc opens full page in place of the plan's left side. */
+/**
+ * The plan's mission control panel: its docs, then material, then the way into mission control, the one session
+ * for adjusting the plan itself. A doc opens full page in place of the plan's left side.
+ */
 export function PlanFiles({ planId, docs, materials, active }: {
   planId: string
   docs: PlanDoc[]
   /** How many material files the plan has. */
   materials: number
-  active?: DocKind | 'material'
+  active?: DocKind | 'material' | 'mission'
 }) {
   return (
     <section aria-labelledby="plan-files" className="flex flex-col gap-2">
-      <h2 id="plan-files" className="text-sm font-medium text-muted">Files</h2>
+      <h2 id="plan-files" className="text-sm font-medium text-muted">Mission Control</h2>
       <ul className="flex flex-col rounded-2xl border border-border bg-surface p-1">
         {DOC_KINDS.map((kind) => {
           const doc = docs.find(d => d.kind === kind)
@@ -38,7 +41,7 @@ export function PlanFiles({ planId, docs, materials, active }: {
                     <FileRow
                       icon={<DocIcon />}
                       label={<span className="font-mono text-[13px]">{DOC_FILE[kind]}</span>}
-                      action={kind === 'training' ? <Link href={`/p/${planId}?mode=training`} className={`${ACTION} text-foreground`}>Set up</Link> : undefined}
+                      action={kind === 'training' ? <Link href={`/p/${planId}/mc?do=setup-training`} className={`${ACTION} text-foreground`}>Set up</Link> : undefined}
                     />
                   )}
             </li>
@@ -56,6 +59,16 @@ export function PlanFiles({ planId, docs, materials, active }: {
           </Link>
         </li>
       </ul>
+      <Link
+        href={`/p/${planId}/mc`}
+        aria-current={active === 'mission' ? 'page' : undefined}
+        className="inline-flex items-center gap-1 self-start rounded-lg px-2 py-1 text-sm text-muted hover:bg-tutor hover:text-foreground aria-[current=page]:text-foreground"
+      >
+        Mission Control
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="size-3.5" aria-hidden>
+          <path d="M6 14 14 6M7.5 6H14v6.5" />
+        </svg>
+      </Link>
     </section>
   )
 }

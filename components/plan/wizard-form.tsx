@@ -27,7 +27,7 @@ export function WizardForm() {
     startTransition(async () => {
       try {
         const { planId } = await createPlan(input)
-        router.push(`/p/${planId}`)
+        router.push(`/p/${planId}/mc`)
       }
       catch {
         setError('The tutor couldn\'t draft your plan. Try again.')

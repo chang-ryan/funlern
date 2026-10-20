@@ -54,7 +54,7 @@ export function ConversationHeader({ id, title, setTitle, saved, plan }: {
       )}
 
       {!saved
-        ? <span className="px-2 py-1.5 text-muted">New chat</span>
+        ? <span className="px-2 py-1.5 text-muted">{title ?? 'New chat'}</span>
         : editing
           ? <TitleInput initial={title ?? ''} onDone={save} onCancel={() => setEditing(false)} />
           : (

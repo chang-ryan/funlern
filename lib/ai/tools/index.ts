@@ -35,8 +35,8 @@ export function toolsFor(ctx: ToolContext) {
       execute: async (input: Omit<Parameters<typeof updatePlanDoc>[0], 'conversationId' | 'planId'>) => {
         if (!ctx.planId)
           throw new Error('This chat has no plan.')
-        if (input.doc === 'training' && ctx.mode !== 'training')
-          throw new Error('training.md is written only in training sessions.')
+        if (input.doc === 'training' && ctx.mode === 'learning')
+          throw new Error('training.md is written only in training sessions and mission control.')
         return { version: await updatePlanDoc({ ...input, planId: ctx.planId, conversationId: ctx.conversationId }) }
       },
     },

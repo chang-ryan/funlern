@@ -12,7 +12,7 @@ import { ModelPicker } from './model-picker'
 import { ReplyProblem } from './reply-problem'
 
 /** Presentational chat: scrolling transcript + composer. State lives in the caller's useChat. */
-export function ChatView({ messages, status, error, onSend, onStop, onRetry, model, session, blocked, header, renderTutor, rail, overlay, transcriptRef, onTranscriptClick, onTranscriptPointerMove }: {
+export function ChatView({ messages, status, error, onSend, onStop, onRetry, model, session, empty, blocked, header, renderTutor, rail, overlay, transcriptRef, onTranscriptClick, onTranscriptPointerMove }: {
   messages: UIMessage[]
   status: ChatStatus
   error?: Error
@@ -24,6 +24,8 @@ export function ChatView({ messages, status, error, onSend, onStop, onRetry, mod
   model?: string
   /** Beside the model picker: the session's mode, when it isn't plain learning. */
   session?: ReactNode
+  /** Shown in place of the transcript until the first message. */
+  empty?: ReactNode
   /** Why the learner can't send right now, e.g. a quiz waiting to be finished. */
   blocked?: string
   header?: ReactNode
@@ -82,6 +84,7 @@ export function ChatView({ messages, status, error, onSend, onStop, onRetry, mod
       <div ref={scrollerRef} className="min-h-0 flex-1 overflow-y-auto">
         <div className={`mx-auto flex gap-8 px-4 py-6 ${width}`}>
           <div ref={transcriptRef} onClick={onTranscriptClick} onPointerMove={onTranscriptPointerMove} className="flex min-w-0 flex-1 flex-col gap-5">
+            {messages.length === 0 && empty}
             {messages.map((m, i) => {
               // The reply-to-be stays hidden behind the typing dots until it has something to show.
               if (waiting && m === last && m.role === 'assistant' && !hasContent(m))

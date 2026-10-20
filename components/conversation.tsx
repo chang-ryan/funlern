@@ -1,6 +1,7 @@
 'use client'
 
 import type { UIMessage } from 'ai'
+import type { ReactNode } from 'react'
 import type { RailItem } from './thread-rail'
 import type { ThreadData } from './types'
 import type { Anchor } from '@/lib/db/schema'
@@ -43,7 +44,7 @@ const chatTransport = transportFor('/api/chat')
 const threadTransport = transportFor('/api/thread')
 
 /** Persisted conversation with side threads anchored on highlighted passages. */
-export function Conversation({ id, isNew = false, start, mode = start?.mode ?? 'learning', trainingStyle = null, firstMessage, title, plan, model, initialMessages, initialThreads }: {
+export function Conversation({ id, isNew = false, start, mode = start?.mode ?? 'learning', trainingStyle = null, firstMessage, intro, suggestions, stayOnPage = false, title, plan, model, initialMessages, initialThreads }: {
   id: string
   /** Not saved yet: the server creates it with the first message, then the URL becomes /c/{id}. */
   isNew?: boolean
@@ -54,6 +55,11 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
   trainingStyle?: TrainingStyle | null
   /** Sent as soon as the conversation mounts, e.g. typed on the plan page. */
   firstMessage?: string
+  /** Shown before the first message, with suggested first messages to send in one click. */
+  intro?: ReactNode
+  suggestions?: string[]
+  /** Keep the page's URL once saved (mission control lives at /p/[id]/mc), instead of moving to /c/{id}. */
+  stayOnPage?: boolean
   title: string | null
   /** The plan the session is in, for the breadcrumb. */
   plan?: { id: string, title: string | null }
@@ -120,17 +126,20 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
     // Deferred: in dev, StrictMode's extra cleanup runs useChat's stop(), which would abort a send made now.
     const timer = setTimeout(() => {
       sentFirstRef.current = true
-      sendMessage({ text: firstMessage }, start ? { body: { start } } : undefined)
+      sendMessage({ text: firstMessage }, isNew && start ? { body: { start } } : undefined)
+      // A first message that came in the URL (?do=…) must not be sent again on reload.
+      if (stayOnPage)
+        window.history.replaceState(null, '', window.location.pathname)
     })
     return () => clearTimeout(timer)
-  }, [firstMessage, start, sendMessage])
+  }, [firstMessage, start, isNew, stayOnPage, sendMessage])
 
   // A reply arriving means the server has saved the conversation; give it its real URL.
   const saved = !isNew || messages.some(m => m.role === 'assistant')
   useEffect(() => {
-    if (isNew && saved)
+    if (isNew && saved && !stayOnPage)
       window.history.replaceState(null, '', `/c/${id}`)
-  }, [isNew, saved, id])
+  }, [isNew, saved, id, stayOnPage])
 
   // Show the Ask button for a settled selection inside one finished tutor message.
   useEffect(() => {
@@ -305,6 +314,20 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
       onRetry={() => regenerate()}
       model={model}
       session={<SessionModeChip mode={mode} style={trainingStyle} />}
+      empty={(intro || suggestions?.length) && (
+        <div className="flex flex-col gap-4">
+          {intro}
+          {suggestions && suggestions.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map(s => (
+                <button key={s} type="button" onClick={() => send(s)} className="rounded-full border border-border px-3 py-1.5 text-sm hover:bg-tutor">
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       transcriptRef={transcriptRef}
       header={<ConversationHeader id={id} title={currentTitle} setTitle={setCurrentTitle} saved={saved} plan={plan} />}
       onTranscriptClick={onTranscriptClick}

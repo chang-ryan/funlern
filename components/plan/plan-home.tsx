@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import type { SessionMode, SessionStart, TrainingStyle } from '@/lib/plans/modes'
+import Link from 'next/link'
 import { useState } from 'react'
 import { Composer } from '@/components/chat/composer'
 import { Conversation } from '@/components/conversation'
@@ -11,12 +12,10 @@ import { PlanShell } from './plan-shell'
 import { PlanTitle } from './plan-title'
 import { SessionList } from './session-list'
 
-const SETUP_MESSAGE = 'Let\'s set up training for this plan.'
-
 /**
  * The plan page: title, a composer that starts a learning or training session in the plan, and its recent
  * sessions. Sending swaps the whole page for the new session, which saves itself and moves to /c/{id}. The
- * mode is fixed once the session starts. Until the plan has training.md, a training session sets it up.
+ * mode is fixed once the session starts. Training needs training.md, which mission control sets up.
  */
 export function PlanHome({ plan, sessions, model, files, hasTraining, initialMode = 'learning' }: {
   plan: { id: string, title: string | null }
@@ -60,7 +59,8 @@ export function PlanHome({ plan, sessions, model, files, hasTraining, initialMod
       <PlanTitle planId={plan.id} initial={plan.title} />
       <div className="flex flex-col gap-2">
         <Composer
-          placeholder={mode === 'learning' ? `New session in ${name}` : setup ? 'Tell the trainer what you\'re training for' : `New ${TRAINING_STYLE_LABEL[style].toLowerCase()} rep in ${name}`}
+          placeholder={mode === 'learning' ? `New session in ${name}` : `New ${TRAINING_STYLE_LABEL[style].toLowerCase()} rep in ${name}`}
+          disabledReason={setup ? 'Set up training first: mission control writes training.md with you' : undefined}
           onSend={begin}
           autoFocus
         />
@@ -78,12 +78,9 @@ export function PlanHome({ plan, sessions, model, files, hasTraining, initialMod
             </>
           )}
           {setup && (
-            <>
-              <span className="text-xs text-muted">The first training session sets up training.md with you.</span>
-              <button type="button" onClick={() => begin(SETUP_MESSAGE)} className="rounded-lg border border-border px-2.5 py-1 text-xs hover:bg-border">
-                Set up training
-              </button>
-            </>
+            <Link href={`/p/${plan.id}/mc?do=setup-training`} className="rounded-lg border border-border px-2.5 py-1 text-xs hover:bg-border">
+              Set up training
+            </Link>
           )}
         </div>
       </div>
