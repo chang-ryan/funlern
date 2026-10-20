@@ -12,6 +12,7 @@ import { anchorFromRange, rangeFromAnchor } from '@/lib/anchor'
 import { useMediaQuery } from '@/lib/hooks/use-media-query'
 import { usePressOutside } from '@/lib/hooks/use-press-outside'
 import { TITLE_PART } from '@/lib/messages'
+import { PLAN_UPDATED } from '@/lib/plans/updates'
 import { activeQuizId, QUIZ_RESULTS, quizIdOf, quizResultsOf } from '@/lib/quiz'
 import { SIDE_QUESTIONS } from '@/lib/threads/side-questions'
 import { AssistantMessage } from './assistant-message'
@@ -33,17 +34,21 @@ const HIGHLIGHT_CSS = `
 function transportFor(api: string) {
   return new DefaultChatTransport({
     api,
-    prepareSendMessagesRequest: ({ id, messages }) => ({ body: { id, message: messages.at(-1) } }),
+    prepareSendMessagesRequest: ({ id, messages, body }) => ({ body: { ...body, id, message: messages.at(-1) } }),
   })
 }
 const chatTransport = transportFor('/api/chat')
 const threadTransport = transportFor('/api/thread')
 
 /** Persisted conversation with side threads anchored on highlighted passages. */
-export function Conversation({ id, isNew = false, title, model, initialMessages, initialThreads }: {
+export function Conversation({ id, isNew = false, planId, firstMessage, title, model, initialMessages, initialThreads }: {
   id: string
   /** Not saved yet: the server creates it with the first message, then the URL becomes /c/{id}. */
   isNew?: boolean
+  /** A new session in this plan: sent with the first message, which creates it there. */
+  planId?: string
+  /** Sent as soon as the conversation mounts, e.g. typed on the plan page. */
+  firstMessage?: string
   title: string | null
   model: string
   initialMessages: UIMessage[]
@@ -85,7 +90,7 @@ export function Conversation({ id, isNew = false, title, model, initialMessages,
         setCurrentTitle(current => current ?? part.data as string)
         return
       }
-      if (part.type !== SIDE_QUESTIONS && part.type !== QUIZ_RESULTS)
+      if (part.type !== SIDE_QUESTIONS && part.type !== QUIZ_RESULTS && part.type !== PLAN_UPDATED)
         return
       setMessages((ms) => {
         const i = ms.findLastIndex(m => m.role === 'user')
@@ -98,6 +103,20 @@ export function Conversation({ id, isNew = false, title, model, initialMessages,
   const activeQuiz = activeQuizId(messages)
   const lastResults = messages.at(-1) && quizResultsOf(messages.at(-1)!)
   const endingQuiz = status === 'submitted' ? lastResults?.quizId : undefined
+
+  // Only a new chat's first message carries the plan; the server ignores it once the conversation exists.
+  const send = (text: string) => sendMessage({ text }, isNew && planId ? { body: { planId } } : undefined)
+  const sentFirstRef = useRef(false)
+  useEffect(() => {
+    if (!firstMessage || sentFirstRef.current)
+      return
+    // Deferred: in dev, StrictMode's extra cleanup runs useChat's stop(), which would abort a send made now.
+    const timer = setTimeout(() => {
+      sentFirstRef.current = true
+      sendMessage({ text: firstMessage }, planId ? { body: { planId } } : undefined)
+    })
+    return () => clearTimeout(timer)
+  }, [firstMessage, planId, sendMessage])
 
   // A reply arriving means the server has saved the conversation; give it its real URL.
   const saved = !isNew || messages.some(m => m.role === 'assistant')
@@ -274,7 +293,7 @@ export function Conversation({ id, isNew = false, title, model, initialMessages,
       messages={messages}
       status={status}
       error={error}
-      onSend={text => sendMessage({ text })}
+      onSend={send}
       onStop={stop}
       onRetry={() => regenerate()}
       model={model}

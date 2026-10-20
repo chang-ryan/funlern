@@ -130,6 +130,47 @@ try {
   const again = await fetch(`${APP}/api/chat`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ id: qz.id, message: { ...end, id: crypto.randomUUID() } }) })
   assert.equal(again.status, 409, 'an ended quiz cannot be ended again')
   step('quiz', `tutor wrote ${questions.length} questions; card has no answers; chat blocked until results; results rebuilt server-side; review saved`)
+
+  // A session in a plan pins the plan's docs and the tutor teaches from them.
+  const [plan] = await sql`insert into plans (user_id, title) values (${session.user.id}, 'Smoke plan') returning id`
+  const [doc] = await sql`insert into plan_docs (plan_id, kind) values (${plan.id}, 'brief') returning id`
+  await sql`insert into plan_doc_versions (doc_id, version, body, author) values (${doc.id}, 1, '## Goal\n\nPronounce Welsh place names, starting with Llanfair.', 'user')`
+  const ps = { id: crypto.randomUUID() }
+  const answer = textOf(await post('/api/chat', { id: ps.id, planId: plan.id, message: say('In five words or fewer, what is my goal in this plan?') }))
+  const [pinned] = await sql`select plan_id, pinned from conversations where id = ${ps.id}`
+  assert.equal(pinned.plan_id, plan.id)
+  assert.deepEqual(pinned.pinned, { brief: 1 })
+  assert.match(answer, /welsh/i, 'tutor sees the plan brief')
+  const other = await fetch(`${APP}/api/chat`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ id: crypto.randomUUID(), planId: crypto.randomUUID(), message: say('hi') }) })
+  assert.equal(other.status, 404, 'a plan that is not yours is refused')
+  step('plan session', `created in the plan, docs pinned, tutor answered "${answer.trim()}"`)
+
+  // An edit made outside the session reaches its tutor on the next message, without touching the system prompt.
+  await until(async () => await count(sql`select count(*)::int from messages where conversation_id = ${ps.id}`) === 2)
+  await sql`insert into plan_doc_versions (doc_id, version, body, author) values (${doc.id}, 2, '## Goal\n\nOrder coffee in Welsh.', 'user')`
+  const edited = await post('/api/chat', { id: ps.id, message: say('And now, in five words or fewer, what is my goal?') })
+  assert.ok(edited.includes('"type":"data-plan-updated"'), 'stream announces the plan update')
+  assert.match(textOf(edited), /coffee/i, 'tutor sees the edited brief')
+  const [after] = await sql`select pinned, seen from conversations where id = ${ps.id}`
+  assert.deepEqual([after.pinned, after.seen], [{ brief: 1 }, { brief: 2 }], 'pinned stays, seen advances')
+  step('plan update', `edit folded into the next message; tutor answered "${textOf(edited).trim()}"`)
+
+  // The tutor writes a doc section with update_doc, then keeps talking; the write doesn't come back as a fold.
+  const [syl] = await sql`insert into plan_docs (plan_id, kind) values (${plan.id}, 'syllabus') returning id`
+  await sql`insert into plan_doc_versions (doc_id, version, body, author) values (${syl.id}, 1, '## Units\n\n- [ ] Vowels\n- [ ] Mutations\n\n## Notes\n', 'tutor')`
+  const ws = { id: crypto.randomUUID() }
+  const wrote = await post('/api/chat', { id: ws.id, planId: plan.id, message: say('I have finished the Vowels unit. Please tick it off in my syllabus, then say "done".') })
+  assert.ok(wrote.includes('"toolName":"update_doc"'), 'tutor called update_doc')
+  assert.ok(textOf(wrote).trim(), 'tutor kept writing after the tool call')
+  await until(async () => await count(sql`select count(*)::int from messages where conversation_id = ${ws.id}`) === 2)
+  const [v2] = await sql`select body, author, conversation_id from plan_doc_versions where doc_id = ${syl.id} and version = 2`
+  assert.equal(v2.author, 'tutor')
+  assert.equal(v2.conversation_id, ws.id)
+  assert.match(v2.body, /- \[x\] Vowels/)
+  assert.match(v2.body, /- \[ \] Mutations/, 'the rest of the section stays')
+  assert.equal((await sql`select seen from conversations where id = ${ws.id}`)[0].seen.syllabus, 2, 'its own write counts as seen')
+  assert.ok(!(await post('/api/chat', { id: ws.id, message: say('thanks') })).includes('"type":"data-plan-updated"'), 'own write is not folded back')
+  step('doc write', 'update_doc ticked Vowels as version 2; tutor went on; not folded back to itself')
 }
 finally {
   await sql`delete from auth.users where email = ${email}`

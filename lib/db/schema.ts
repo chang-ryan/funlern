@@ -1,5 +1,8 @@
+import type { AnyPgColumn } from 'drizzle-orm/pg-core'
+import type { DocKind } from '@/lib/plans/docs'
 import { boolean, index, integer, jsonb, pgEnum, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
 import { authUsers } from 'drizzle-orm/supabase'
+import { DOC_KINDS } from '@/lib/plans/docs'
 
 // RLS on with no policies: blocks the Supabase Data API; Drizzle (table owner) bypasses it.
 
@@ -18,12 +21,68 @@ export const profiles = pgTable('profiles', {
 
 const userId = () => uuid().notNull().references(() => profiles.id, { onDelete: 'cascade' })
 
-export const conversations = pgTable('conversations', {
-  id: uuid().primaryKey().defaultRandom(),
-  userId: userId(),
-  title: text(),
-  ...timestamps,
-}).enableRLS()
+// A plan holds a learner's sessions on one subject, plus the docs the tutor reads (brief, syllabus, training).
+export const plans = pgTable(
+  'plans',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: userId(),
+    title: text(),
+    ...timestamps,
+  },
+  t => [index('plans_user_idx').on(t.userId)],
+).enableRLS()
+
+export const conversations = pgTable(
+  'conversations',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: userId(),
+    // Null: Uncategorized. Deleting a plan moves its sessions there.
+    planId: uuid().references((): AnyPgColumn => plans.id, { onDelete: 'set null' }),
+    title: text(),
+    pinned: jsonb().$type<DocVersions>(),
+    seen: jsonb().$type<DocVersions>(),
+    ...timestamps,
+  },
+  t => [index('conversations_plan_idx').on(t.planId)],
+).enableRLS()
+
+export const docKindEnum = pgEnum('doc_kind', DOC_KINDS)
+
+/** Doc versions a session's tutor has: `pinned` built its system prompt, `seen` adds what was folded in since. */
+export type DocVersions = Partial<Record<DocKind, number>>
+
+export const planDocs = pgTable(
+  'plan_docs',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    planId: uuid().notNull().references(() => plans.id, { onDelete: 'cascade' }),
+    kind: docKindEnum().notNull(),
+    ...timestamps,
+  },
+  t => [unique('plan_docs_plan_kind_key').on(t.planId, t.kind)],
+).enableRLS()
+
+export const docAuthorEnum = pgEnum('doc_author', ['user', 'tutor'])
+
+// Every save is a new version; the current doc is its highest version. Restoring copies an old body forward.
+export const planDocVersions = pgTable(
+  'plan_doc_versions',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    docId: uuid().notNull().references(() => planDocs.id, { onDelete: 'cascade' }),
+    version: integer().notNull(),
+    body: text().notNull(),
+    author: docAuthorEnum().notNull(),
+    // The session the tutor wrote it from.
+    conversationId: uuid().references((): AnyPgColumn => conversations.id, { onDelete: 'set null' }),
+    // One line for history and the chat note, e.g. "Units: marked 3 done".
+    summary: text(),
+    ...timestamps,
+  },
+  t => [unique('plan_doc_versions_doc_version_key').on(t.docId, t.version)],
+).enableRLS()
 
 export const roleEnum = pgEnum('role', ['system', 'user', 'assistant'])
 

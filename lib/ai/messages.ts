@@ -1,7 +1,9 @@
 import type { UIMessage } from 'ai'
+import type { PlanUpdate } from '@/lib/plans/updates'
 import type { QuizResults } from '@/lib/quiz'
 import type { SideQuestionsData } from '@/lib/threads/side-questions'
 import { convertToModelMessages } from 'ai'
+import { PLAN_UPDATED, renderPlanUpdate } from '@/lib/plans/updates'
 import { QUIZ_RESULTS } from '@/lib/quiz'
 import { renderSideQuestions, SIDE_QUESTIONS } from '@/lib/threads/side-questions'
 import { parseCommand } from './commands'
@@ -21,6 +23,8 @@ export function toModelMessages(messages: UIMessage[]) {
     convertDataPart: (part) => {
       if (part.type === SIDE_QUESTIONS)
         return { type: 'text', text: renderSideQuestions(part.data as SideQuestionsData) }
+      if (part.type === PLAN_UPDATED)
+        return { type: 'text', text: renderPlanUpdate(part.data as PlanUpdate) }
       if (part.type === QUIZ_RESULTS)
         return { type: 'text', text: renderQuizResults(part.data as QuizResults) }
       return undefined

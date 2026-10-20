@@ -1,14 +1,15 @@
 import type { UIMessage } from 'ai'
-import { createUIMessageStreamResponse, streamText, toUIMessageStream, validateUIMessages } from 'ai'
+import { createUIMessageStreamResponse, stepCountIs, streamText, toUIMessageStream, validateUIMessages } from 'ai'
 import { markCacheBreakpoint } from '@/lib/ai/cache'
+import { hideTools } from '@/lib/ai/hide-tools'
 import { toModelMessages } from '@/lib/ai/messages'
 import { currentModel } from '@/lib/ai/model'
-import { SYSTEM_PROMPT } from '@/lib/ai/prompts/system'
 import { threadFrame } from '@/lib/ai/prompts/turn'
 import { finishMetadata, saveReplyWhenDone } from '@/lib/ai/reply'
-import { TOOL_CHOICE, toolsFor } from '@/lib/ai/tools'
+import { systemFor } from '@/lib/ai/system'
+import { toolChoiceFor, toolsFor } from '@/lib/ai/tools'
 import { placeTurn } from '@/lib/ai/turn'
-import { deleteThreadMessagesFrom, getMessages, getThread, getThreadMessages, saveThreadMessages } from '@/lib/db/queries'
+import { deleteThreadMessagesFrom, getConversation, getMessages, getThread, getThreadMessages, saveThreadMessages } from '@/lib/db/queries'
 import { textOf } from '@/lib/messages'
 import { getUserId } from '@/lib/supabase/server'
 
@@ -37,22 +38,25 @@ export async function POST(req: Request) {
   const framed: UIMessage = { ...first, parts: [{ type: 'text', text: threadFrame(t.anchor, textOf(first)) }] }
   const own = await toModelMessages([framed, ...rest])
 
+  const convo = await getConversation(userId, t.conversationId)
   const result = streamText({
     model: await currentModel(),
-    system: SYSTEM_PROMPT,
-    tools: toolsFor({ userId, conversationId: t.conversationId }),
-    toolChoice: TOOL_CHOICE,
+    // Same system prompt as main, so the frozen prefix reuses main's cache.
+    system: await systemFor(convo!),
+    tools: toolsFor({ userId, conversationId: t.conversationId, planId: convo!.planId }),
+    toolChoice: toolChoiceFor(convo!),
+    stopWhen: stepCountIs(4),
     // Breakpoint 1 reuses main's cache; breakpoint 2 caches this thread for its next reply.
     messages: markCacheBreakpoint(markCacheBreakpoint([...prefix, ...own], prefix.length - 1), prefix.length + own.length - 1),
   })
   const replyId = saveReplyWhenDone(result.stream, reply => saveThreadMessages(id, [...threadMessages, reply]))
 
   return createUIMessageStreamResponse({
-    stream: toUIMessageStream({
+    stream: hideTools(toUIMessageStream({
       stream: result.stream,
       originalMessages: threadMessages,
       generateMessageId: () => replyId,
       messageMetadata: finishMetadata,
-    }),
+    })),
   })
 }

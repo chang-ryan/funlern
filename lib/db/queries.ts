@@ -3,6 +3,7 @@ import type { MessageMetadata } from './schema'
 import { and, asc, desc, eq, gte, inArray, isNull, lte, max, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '.'
+import { getPlan, latestVersions } from './plans'
 import { conversations, messages, threadMessages, threads } from './schema'
 import 'server-only'
 
@@ -26,15 +27,19 @@ export async function getConversation(userId: string, id: string) {
 
 /**
  * A new chat has no row until its first message, so backing out of an empty chat leaves nothing behind.
- * The client picks the id; one that is malformed or belongs to someone else comes back null.
+ * The client picks the id; one that is malformed or belongs to someone else comes back null. A new
+ * session in a plan pins the plan's current docs; a plan that isn't the learner's is refused.
  */
-export async function getOrStartConversation(userId: string, id: string) {
+export async function getOrStartConversation(userId: string, id: string, planId?: string) {
   if (!z.uuid().safeParse(id).success)
     return null
   const existing = await getConversation(userId, id)
   if (existing)
     return existing
-  await db.insert(conversations).values({ id, userId }).onConflictDoNothing()
+  if (planId && !await getPlan(userId, planId))
+    return null
+  const versions = planId ? await latestVersions(planId) : null
+  await db.insert(conversations).values({ id, userId, planId, pinned: versions, seen: versions }).onConflictDoNothing()
   return getConversation(userId, id)
 }
 
