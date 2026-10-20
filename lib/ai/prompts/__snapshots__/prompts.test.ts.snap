@@ -1,5 +1,42 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`prompts > plan block 1`] = `
+"This session belongs to the learner's study plan. Its docs follow inside <plan>: brief.md says what they want and why, syllabus.md the units in order. Teach towards the brief, follow the syllabus unless the learner steers elsewhere, and pitch it at their level and seriousness.
+
+<plan>
+<doc name="brief.md">
+## Goal
+
+Read JS fluently
+</doc>
+<doc name="syllabus.md">
+## Units
+
+- [ ] Closures
+
+## Notes
+</doc>
+</plan>"
+`;
+
+exports[`prompts > plan draft 1`] = `
+"A learner is starting a study plan in funlern, a tutoring app. Draft the plan from their answers below.
+
+<answers>
+<what>Rust &lt;ownership&gt;</what>
+<why>Not given</why>
+<level>some</level>
+<seriousness>Serious: working towards a goal. Units should build to it, hardest gaps first.</seriousness>
+<deadline>2026-12-01</deadline>
+</answers>
+
+- title: the subject in 2 to 6 words, sentence case, no quotes.
+- brief: one short paragraph or a few bullets per section, in the learner's terms. Goal is what they want to be able to do. Level and Seriousness restate their answers in a sentence. Constraints holds the deadline and anything else limiting; empty if none.
+- syllabus Units: 4 to 10 units as a Markdown checklist ("- [ ] Unit"), each with a one-line description after a colon, ordered for their level.
+- syllabus Notes: empty unless something in their answers needs saying.
+Write Markdown. No headings inside sections."
+`;
+
 exports[`prompts > quiz request 1`] = `
 "The learner asked for a quiz (/quiz-me). Write one with create_quiz on what we have covered so far.
 Ask about what we actually discussed, at the level we discussed it."

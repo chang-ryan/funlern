@@ -5,8 +5,8 @@ import { markCacheBreakpoint } from '@/lib/ai/cache'
 import { parseCommand } from '@/lib/ai/commands'
 import { toModelMessages } from '@/lib/ai/messages'
 import { currentModel } from '@/lib/ai/model'
-import { SYSTEM_PROMPT } from '@/lib/ai/prompts/system'
 import { finishMetadata, saveReplyWhenDone } from '@/lib/ai/reply'
+import { systemFor } from '@/lib/ai/system'
 import { titleConversation } from '@/lib/ai/title'
 import { TOOL_CHOICE, toolsFor } from '@/lib/ai/tools'
 import { placeTurn } from '@/lib/ai/turn'
@@ -77,20 +77,20 @@ export async function POST(req: Request) {
   if (title)
     after(title)
 
-  const ctx = { userId, conversationId: id, title }
+  const ctx = { userId, conversationId: id, title, system: await systemFor(convo) }
   if (parseCommand(outgoing)?.name === 'quiz-me')
     return quizReply(ctx, messages)
   return reply(ctx, messages)
 }
 
-interface Ctx { userId: string, conversationId: string, title?: Promise<string | null> }
+interface Ctx { userId: string, conversationId: string, system: string, title?: Promise<string | null> }
 
 /** Streams the tutor's reply and saves it. */
 async function reply(ctx: Ctx, messages: UIMessage[]) {
   const modelMessages = await toModelMessages(messages)
   const result = streamText({
     model: await currentModel(),
-    system: SYSTEM_PROMPT,
+    system: ctx.system,
     tools: toolsFor(ctx),
     toolChoice: TOOL_CHOICE,
     messages: markCacheBreakpoint(modelMessages, modelMessages.length - 1),
@@ -114,7 +114,7 @@ async function quizReply(ctx: Ctx, messages: UIMessage[]) {
     const modelMessages = await toModelMessages(messages)
     const result = await generateText({
       model: await currentModel(),
-      system: SYSTEM_PROMPT,
+      system: ctx.system,
       tools: toolsFor(ctx),
       toolChoice: { type: 'tool', toolName: 'create_quiz' },
       messages: markCacheBreakpoint(modelMessages, modelMessages.length - 1),

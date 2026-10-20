@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { planBlock } from './plan'
 import { SYSTEM_PROMPT } from './system'
-import { titlePrompt } from './title'
+import { planDraftPrompt } from './tasks/plan-draft'
+import { titlePrompt } from './tasks/title'
 import { quizRequest, renderQuizResults, threadFrame } from './turn'
 
 // Pins the exact bytes sent to the model. A change here invalidates the prompt cache and changes
@@ -13,6 +15,18 @@ describe('prompts', () => {
   it('thread frame', () => {
     const anchor = { quote: 'first line\nsecond line', prefix: '', suffix: '' }
     expect(threadFrame(anchor, 'Why the second line?')).toMatchSnapshot()
+  })
+
+  it('plan block', () => {
+    const doc = { version: 1, author: 'tutor' as const, summary: null, createdAt: new Date(0) }
+    expect(planBlock([
+      { ...doc, kind: 'syllabus', body: '## Units\n\n- [ ] Closures\n\n## Notes\n' },
+      { ...doc, kind: 'brief', body: '## Goal\n\nRead JS fluently\n' },
+    ])).toMatchSnapshot()
+  })
+
+  it('plan draft', () => {
+    expect(planDraftPrompt({ what: 'Rust <ownership>', why: '', level: 'some', seriousness: 'serious', deadline: '2026-12-01' })).toMatchSnapshot()
   })
 
   it('title', () => {

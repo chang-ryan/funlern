@@ -3,12 +3,12 @@ import { createUIMessageStreamResponse, streamText, toUIMessageStream, validateU
 import { markCacheBreakpoint } from '@/lib/ai/cache'
 import { toModelMessages } from '@/lib/ai/messages'
 import { currentModel } from '@/lib/ai/model'
-import { SYSTEM_PROMPT } from '@/lib/ai/prompts/system'
 import { threadFrame } from '@/lib/ai/prompts/turn'
 import { finishMetadata, saveReplyWhenDone } from '@/lib/ai/reply'
+import { systemFor } from '@/lib/ai/system'
 import { TOOL_CHOICE, toolsFor } from '@/lib/ai/tools'
 import { placeTurn } from '@/lib/ai/turn'
-import { deleteThreadMessagesFrom, getMessages, getThread, getThreadMessages, saveThreadMessages } from '@/lib/db/queries'
+import { deleteThreadMessagesFrom, getConversation, getMessages, getThread, getThreadMessages, saveThreadMessages } from '@/lib/db/queries'
 import { textOf } from '@/lib/messages'
 import { getUserId } from '@/lib/supabase/server'
 
@@ -37,9 +37,11 @@ export async function POST(req: Request) {
   const framed: UIMessage = { ...first, parts: [{ type: 'text', text: threadFrame(t.anchor, textOf(first)) }] }
   const own = await toModelMessages([framed, ...rest])
 
+  const convo = await getConversation(userId, t.conversationId)
   const result = streamText({
     model: await currentModel(),
-    system: SYSTEM_PROMPT,
+    // Same system prompt as main, so the frozen prefix reuses main's cache.
+    system: await systemFor(convo!),
     tools: toolsFor({ userId, conversationId: t.conversationId }),
     toolChoice: TOOL_CHOICE,
     // Breakpoint 1 reuses main's cache; breakpoint 2 caches this thread for its next reply.

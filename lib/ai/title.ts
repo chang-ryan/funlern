@@ -2,7 +2,7 @@ import { anthropic } from '@ai-sdk/anthropic'
 import { generateText, Output } from 'ai'
 import { z } from 'zod'
 import { setGeneratedTitle } from '@/lib/db/queries'
-import { titlePrompt } from './prompts/title'
+import { titlePrompt } from './prompts/tasks/title'
 import 'server-only'
 
 // Titles are a small side task: always the fast model, whatever the learner picked for the tutor.
