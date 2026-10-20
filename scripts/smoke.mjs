@@ -130,6 +130,20 @@ try {
   const again = await fetch(`${APP}/api/chat`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ id: qz.id, message: { ...end, id: crypto.randomUUID() } }) })
   assert.equal(again.status, 409, 'an ended quiz cannot be ended again')
   step('quiz', `tutor wrote ${questions.length} questions; card has no answers; chat blocked until results; results rebuilt server-side; review saved`)
+
+  // A session in a plan pins the plan's docs and the tutor teaches from them.
+  const [plan] = await sql`insert into plans (user_id, title) values (${session.user.id}, 'Smoke plan') returning id`
+  const [doc] = await sql`insert into plan_docs (plan_id, kind) values (${plan.id}, 'brief') returning id`
+  await sql`insert into plan_doc_versions (doc_id, version, body, author) values (${doc.id}, 1, '## Goal\n\nPronounce Welsh place names, starting with Llanfair.', 'user')`
+  const ps = { id: crypto.randomUUID() }
+  const answer = textOf(await post('/api/chat', { id: ps.id, planId: plan.id, message: say('In five words or fewer, what is my goal in this plan?') }))
+  const [pinned] = await sql`select plan_id, pinned from conversations where id = ${ps.id}`
+  assert.equal(pinned.plan_id, plan.id)
+  assert.deepEqual(pinned.pinned, { brief: 1 })
+  assert.match(answer, /welsh/i, 'tutor sees the plan brief')
+  const other = await fetch(`${APP}/api/chat`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ id: crypto.randomUUID(), planId: crypto.randomUUID(), message: say('hi') }) })
+  assert.equal(other.status, 404, 'a plan that is not yours is refused')
+  step('plan session', `created in the plan, docs pinned, tutor answered "${answer.trim()}"`)
 }
 finally {
   await sql`delete from auth.users where email = ${email}`
