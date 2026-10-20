@@ -112,6 +112,13 @@ enabled = true
 # The maximum file size allowed (e.g. "5MB", "500KB").
 file_size_limit = "50MiB"
 
+# Originals of plan material (PDF, Markdown), written once by the server with the secret key; never public.
+# Hosted: `supabase seed buckets --linked` creates it.
+[storage.buckets.materials]
+public = false
+file_size_limit = "10MiB"
+allowed_mime_types = ["application/pdf", "text/markdown", "text/plain"]
+
 # Uncomment to configure local storage buckets
 # [storage.buckets.images]
 # public = false
