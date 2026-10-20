@@ -4,6 +4,7 @@ import { planBlock } from './plan'
 import { SYSTEM_PROMPT } from './system'
 import { planDraftPrompt } from './tasks/plan-draft'
 import { titlePrompt } from './tasks/title'
+import { transcribePrompt } from './tasks/transcribe'
 import { quizRequest, renderQuizResults, threadFrame } from './turn'
 
 // Pins the exact bytes sent to the model. A change here invalidates the prompt cache and changes
@@ -23,7 +24,11 @@ describe('prompts', () => {
     expect(planBlock([
       { ...doc, kind: 'syllabus', body: '## Units\n\n- [ ] Closures\n\n## Notes\n' },
       { ...doc, kind: 'brief', body: '## Goal\n\nRead JS fluently\n' },
-    ])).toMatchSnapshot()
+    ], [{ name: 'MDN "closures".md', text: 'A closure is <the> combination…' }])).toMatchSnapshot()
+  })
+
+  it('transcribe', () => {
+    expect(transcribePrompt(3)).toMatchSnapshot()
   })
 
   it('training', () => {

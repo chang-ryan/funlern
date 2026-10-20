@@ -1,5 +1,7 @@
 import type { UIMessage, UIMessageStreamWriter } from 'ai'
+import type { DocVersions } from '@/lib/db/schema'
 import type { SessionMode, SessionStart } from '@/lib/plans/modes'
+import type { PlanUpdate } from '@/lib/plans/updates'
 import { createUIMessageStream, createUIMessageStreamResponse, generateId, generateText, stepCountIs, streamText, toUIMessageStream, validateUIMessages } from 'ai'
 import { after } from 'next/server'
 import { markCacheBreakpoint } from '@/lib/ai/cache'
@@ -12,6 +14,7 @@ import { systemFor } from '@/lib/ai/system'
 import { titleConversation } from '@/lib/ai/title'
 import { toolChoiceFor, toolsFor } from '@/lib/ai/tools'
 import { placeTurn } from '@/lib/ai/turn'
+import { foldMaterialUpdates } from '@/lib/db/materials'
 import { foldPlanUpdates, setSeen } from '@/lib/db/plans'
 import { deleteMessagesFrom, getMessages, getOrStartConversation, getThreadsWithMessages, saveMessages, setFoldedThrough } from '@/lib/db/queries'
 import { endQuiz, exitActiveQuizzes, getActiveQuizId, getLearnerQuiz } from '@/lib/db/quizzes'
@@ -61,7 +64,7 @@ export async function POST(req: Request) {
   // A retry keeps the side questions already folded into its saved copy.
   const fold = turn.retry ? null : foldThreads(await getThreadsWithMessages(id))
   // Plan doc changes the tutor hasn't seen ride on this message too, ahead of the side questions.
-  const planFold = !turn.retry && convo.planId ? await foldPlanUpdates(convo.planId, convo.seen ?? {}) : null
+  const planFold = !turn.retry && convo.planId ? await foldPlan(convo.planId, convo.seen ?? {}, convo.seenMaterials ?? []) : null
   const added = [
     ...(planFold?.data ? [{ type: PLAN_UPDATED, data: planFold.data } as const] : []),
     ...(fold ? [{ type: SIDE_QUESTIONS, data: fold.data } as const] : []),
@@ -79,7 +82,7 @@ export async function POST(req: Request) {
   if (fold)
     await setFoldedThrough(fold.foldedThrough)
   if (planFold)
-    await setSeen(id, planFold.seen)
+    await setSeen(id, planFold.seen, planFold.seenMaterials)
 
   // The first message names the conversation, alongside the reply. A command says nothing about the topic.
   const question = textOf(incoming).trim()
@@ -93,6 +96,16 @@ export async function POST(req: Request) {
   if (parseCommand(outgoing)?.name === 'quiz-me')
     return quizReply(ctx, messages)
   return reply(ctx, messages)
+}
+
+/** Doc and material changes the tutor hasn't seen, as one update for the next learner message. */
+async function foldPlan(planId: string, seen: DocVersions, seenMaterials: string[]) {
+  const [docs, materials] = await Promise.all([foldPlanUpdates(planId, seen), foldMaterialUpdates(planId, seenMaterials)])
+  const changed = materials.added.length || materials.removed.length
+  const data: PlanUpdate | null = docs.data || changed
+    ? { docs: docs.data?.docs ?? [], ...(changed ? { materials: { added: materials.added, removed: materials.removed } } : {}) }
+    : null
+  return { data, seen: docs.seen, seenMaterials: materials.seen }
 }
 
 interface Ctx { userId: string, conversationId: string, planId: string | null, mode: SessionMode, system: string, title?: Promise<string | null> }
