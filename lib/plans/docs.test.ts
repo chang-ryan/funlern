@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseDoc, renderDoc } from './docs'
+import { parseDoc, planDescription, renderDoc } from './docs'
 
 describe('plan docs', () => {
   it('renders every section in template order', () => {
@@ -14,5 +14,11 @@ describe('plan docs', () => {
 
   it('keeps unknown headings inside the section above', () => {
     expect(parseDoc('syllabus', '## Units\n\n- [ ] A\n\n## Extra\n\nx\n\n## Notes\n\nn')).toEqual({ Units: '- [ ] A\n\n## Extra\n\nx', Notes: 'n' })
+  })
+
+  it('describes a plan by the first paragraph of its goal', () => {
+    expect(planDescription(renderDoc('brief', { Goal: 'Read **query plans**\nand fix them.\n\nMore later.' }))).toBe('Read query plans and fix them.')
+    expect(planDescription(renderDoc('brief', { Goal: '- Pass the loop\n- Get the offer' }))).toBe('Pass the loop Get the offer')
+    expect(planDescription('')).toBe('')
   })
 })

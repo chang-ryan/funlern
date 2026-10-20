@@ -23,8 +23,18 @@ export async function createPlan(userId: string, title: string | null, docs: { k
   })
 }
 
+/** The learner's plans, newest first, each with its brief's current body (null if it has none). */
 export async function getPlans(userId: string) {
-  return db.select().from(plans).where(eq(plans.userId, userId)).orderBy(desc(plans.createdAt))
+  const rows = await db
+    .selectDistinctOn([plans.id], { plan: plans, brief: planDocVersions.body })
+    .from(plans)
+    .leftJoin(planDocs, and(eq(planDocs.planId, plans.id), eq(planDocs.kind, 'brief')))
+    .leftJoin(planDocVersions, eq(planDocVersions.docId, planDocs.id))
+    .where(eq(plans.userId, userId))
+    .orderBy(plans.id, desc(planDocVersions.version))
+  return rows
+    .map(r => ({ ...r.plan, brief: r.brief }))
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
 }
 
 /** The learner's plan, or null for anyone else's or a malformed id (ids come from URLs and request bodies). */

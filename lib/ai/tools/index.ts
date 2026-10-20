@@ -1,4 +1,5 @@
 import type { InferUITools, UIMessage } from 'ai'
+import type { SessionMode } from '@/lib/plans/modes'
 import { updatePlanDoc } from '@/lib/db/plans'
 import { saveQuiz } from '@/lib/db/quizzes'
 import { createQuiz, updateDoc } from './schemas'
@@ -8,6 +9,7 @@ export interface ToolContext {
   userId: string
   conversationId: string
   planId?: string | null
+  mode?: SessionMode
   /** Set only on the forced /quiz-me call; anywhere else create_quiz refuses. */
   quiz?: boolean
 }
@@ -33,6 +35,8 @@ export function toolsFor(ctx: ToolContext) {
       execute: async (input: Omit<Parameters<typeof updatePlanDoc>[0], 'conversationId' | 'planId'>) => {
         if (!ctx.planId)
           throw new Error('This chat has no plan.')
+        if (input.doc === 'training' && ctx.mode !== 'training')
+          throw new Error('training.md is written only in training sessions.')
         return { version: await updatePlanDoc({ ...input, planId: ctx.planId, conversationId: ctx.conversationId }) }
       },
     },

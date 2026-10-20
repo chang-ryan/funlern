@@ -3,6 +3,7 @@ import type { DocKind } from '@/lib/plans/docs'
 import { boolean, index, integer, jsonb, pgEnum, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
 import { authUsers } from 'drizzle-orm/supabase'
 import { DOC_KINDS } from '@/lib/plans/docs'
+import { SESSION_MODES, TRAINING_STYLES } from '@/lib/plans/modes'
 
 // RLS on with no policies: blocks the Supabase Data API; Drizzle (table owner) bypasses it.
 
@@ -33,6 +34,9 @@ export const plans = pgTable(
   t => [index('plans_user_idx').on(t.userId)],
 ).enableRLS()
 
+export const sessionModeEnum = pgEnum('session_mode', SESSION_MODES)
+export const trainingStyleEnum = pgEnum('training_style', TRAINING_STYLES)
+
 export const conversations = pgTable(
   'conversations',
   {
@@ -41,6 +45,9 @@ export const conversations = pgTable(
     // Null: Uncategorized. Deleting a plan moves its sessions there.
     planId: uuid().references((): AnyPgColumn => plans.id, { onDelete: 'set null' }),
     title: text(),
+    // Fixed when the session starts. A training session in a plan without training.md sets it up instead.
+    mode: sessionModeEnum().default('learning').notNull(),
+    trainingStyle: trainingStyleEnum(),
     pinned: jsonb().$type<DocVersions>(),
     seen: jsonb().$type<DocVersions>(),
     ...timestamps,

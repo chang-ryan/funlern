@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { TRAINING_SETUP, trainingRep } from './mode'
 import { planBlock } from './plan'
 import { SYSTEM_PROMPT } from './system'
 import { planDraftPrompt } from './tasks/plan-draft'
@@ -23,6 +24,13 @@ describe('prompts', () => {
       { ...doc, kind: 'syllabus', body: '## Units\n\n- [ ] Closures\n\n## Notes\n' },
       { ...doc, kind: 'brief', body: '## Goal\n\nRead JS fluently\n' },
     ])).toMatchSnapshot()
+  })
+
+  it('training', () => {
+    expect(TRAINING_SETUP).toMatchSnapshot()
+    expect(trainingRep('guided')).toMatchSnapshot()
+    expect(trainingRep('full')).toMatchSnapshot()
+    expect(trainingRep('card')).toMatchSnapshot()
   })
 
   it('plan draft', () => {

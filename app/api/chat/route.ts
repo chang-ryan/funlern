@@ -1,4 +1,5 @@
 import type { UIMessage, UIMessageStreamWriter } from 'ai'
+import type { SessionMode, SessionStart } from '@/lib/plans/modes'
 import { createUIMessageStream, createUIMessageStreamResponse, generateId, generateText, stepCountIs, streamText, toUIMessageStream, validateUIMessages } from 'ai'
 import { after } from 'next/server'
 import { markCacheBreakpoint } from '@/lib/ai/cache'
@@ -26,8 +27,8 @@ export async function POST(req: Request) {
   if (!userId)
     return new Response('Unauthorized', { status: 401 })
 
-  const { id, message, planId }: { id: string, message: UIMessage, planId?: string } = await req.json()
-  const convo = await getOrStartConversation(userId, id, planId)
+  const { id, message, start }: { id: string, message: UIMessage, start?: SessionStart } = await req.json()
+  const convo = await getOrStartConversation(userId, id, start)
   if (!convo)
     return new Response('Not found', { status: 404 })
   if (message.role !== 'user')
@@ -88,13 +89,13 @@ export async function POST(req: Request) {
   if (title)
     after(title)
 
-  const ctx = { userId, conversationId: id, planId: convo.planId, title, system: await systemFor(convo) }
+  const ctx = { userId, conversationId: id, planId: convo.planId, mode: convo.mode, title, system: await systemFor(convo) }
   if (parseCommand(outgoing)?.name === 'quiz-me')
     return quizReply(ctx, messages)
   return reply(ctx, messages)
 }
 
-interface Ctx { userId: string, conversationId: string, planId: string | null, system: string, title?: Promise<string | null> }
+interface Ctx { userId: string, conversationId: string, planId: string | null, mode: SessionMode, system: string, title?: Promise<string | null> }
 
 /** Streams the tutor's reply and saves it. */
 async function reply(ctx: Ctx, messages: UIMessage[]) {

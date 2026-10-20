@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { SessionList } from '@/components/plan/session-list'
 import { getPlans, getUncategorized } from '@/lib/db/plans'
+import { planDescription } from '@/lib/plans/docs'
 import { getUserId } from '@/lib/supabase/server'
 
 export default async function Home() {
@@ -20,7 +21,7 @@ export default async function Home() {
           <Link href="/plans/new" className="rounded-lg bg-student px-3 py-1.5 text-sm text-student-foreground">New plan</Link>
         </header>
         <SessionList
-          items={plans.map(p => ({ href: `/p/${p.id}`, title: p.title ?? 'Untitled plan', date: p.createdAt }))}
+          items={plans.map(p => ({ href: `/p/${p.id}`, title: p.title ?? 'Untitled plan', description: p.brief ? planDescription(p.brief) : undefined, date: p.createdAt }))}
           empty="No plans yet. A plan holds what you want to learn and the sessions that get you there."
         />
       </section>

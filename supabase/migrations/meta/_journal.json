@@ -50,6 +50,13 @@
       "when": 1792522220610,
       "tag": "20261020185020_plans",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792527004437,
+      "tag": "20261020201004_session_modes",
+      "breakpoints": true
     }
   ]
 }

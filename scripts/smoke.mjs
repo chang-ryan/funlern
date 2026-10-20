@@ -136,12 +136,12 @@ try {
   const [doc] = await sql`insert into plan_docs (plan_id, kind) values (${plan.id}, 'brief') returning id`
   await sql`insert into plan_doc_versions (doc_id, version, body, author) values (${doc.id}, 1, '## Goal\n\nPronounce Welsh place names, starting with Llanfair.', 'user')`
   const ps = { id: crypto.randomUUID() }
-  const answer = textOf(await post('/api/chat', { id: ps.id, planId: plan.id, message: say('In five words or fewer, what is my goal in this plan?') }))
+  const answer = textOf(await post('/api/chat', { id: ps.id, start: { planId: plan.id }, message: say('In five words or fewer, what is my goal in this plan?') }))
   const [pinned] = await sql`select plan_id, pinned from conversations where id = ${ps.id}`
   assert.equal(pinned.plan_id, plan.id)
   assert.deepEqual(pinned.pinned, { brief: 1 })
   assert.match(answer, /welsh/i, 'tutor sees the plan brief')
-  const other = await fetch(`${APP}/api/chat`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ id: crypto.randomUUID(), planId: crypto.randomUUID(), message: say('hi') }) })
+  const other = await fetch(`${APP}/api/chat`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ id: crypto.randomUUID(), start: { planId: crypto.randomUUID() }, message: say('hi') }) })
   assert.equal(other.status, 404, 'a plan that is not yours is refused')
   step('plan session', `created in the plan, docs pinned, tutor answered "${answer.trim()}"`)
 
@@ -159,7 +159,7 @@ try {
   const [syl] = await sql`insert into plan_docs (plan_id, kind) values (${plan.id}, 'syllabus') returning id`
   await sql`insert into plan_doc_versions (doc_id, version, body, author) values (${syl.id}, 1, '## Units\n\n- [ ] Vowels\n- [ ] Mutations\n\n## Notes\n', 'tutor')`
   const ws = { id: crypto.randomUUID() }
-  const wrote = await post('/api/chat', { id: ws.id, planId: plan.id, message: say('I have finished the Vowels unit. Please tick it off in my syllabus, then say "done".') })
+  const wrote = await post('/api/chat', { id: ws.id, start: { planId: plan.id }, message: say('I have finished the Vowels unit. Please tick it off in my syllabus, then say "done".') })
   assert.ok(wrote.includes('"toolName":"update_doc"'), 'tutor called update_doc')
   assert.ok(textOf(wrote).trim(), 'tutor kept writing after the tool call')
   await until(async () => await count(sql`select count(*)::int from messages where conversation_id = ${ws.id}`) === 2)
@@ -171,6 +171,26 @@ try {
   assert.equal((await sql`select seen from conversations where id = ${ws.id}`)[0].seen.syllabus, 2, 'its own write counts as seen')
   assert.ok(!(await post('/api/chat', { id: ws.id, message: say('thanks') })).includes('"type":"data-plan-updated"'), 'own write is not folded back')
   step('doc write', 'update_doc ticked Vowels as version 2; tutor went on; not folded back to itself')
+
+  // Training: the plan's first training session sets up training.md; after that, sessions are reps with a style.
+  const setup = { id: crypto.randomUUID() }
+  await post('/api/chat', { id: setup.id, start: { planId: plan.id, mode: 'training', style: 'full' }, message: say('I am training for a Welsh speaking exam in December: a 5 minute conversation with an examiner. Write training.md now without asking me anything: Method is one 5 minute spoken exchange in writing, no help; Rubric is pronunciation, mutations, fluency, each pass or fail.') })
+  const [setupRow] = await sql`select mode, training_style from conversations where id = ${setup.id}`
+  assert.deepEqual([setupRow.mode, setupRow.training_style], ['training', null], 'no training.md yet: a setup session, no style')
+  await until(async () => (await sql`select count(*)::int from plan_docs where plan_id = ${plan.id} and kind = 'training'`)[0].count === 1)
+  const [training] = await sql`select v.body, v.author from plan_doc_versions v join plan_docs d on d.id = v.doc_id where d.plan_id = ${plan.id} and d.kind = 'training' order by v.version desc limit 1`
+  assert.equal(training.author, 'tutor')
+  assert.match(training.body, /## Method\n\n\S/, 'Method written')
+  assert.match(training.body, /## Rubric\n\n\S/, 'Rubric written')
+  const rep = { id: crypto.randomUUID() }
+  assert.ok(textOf(await post('/api/chat', { id: rep.id, start: { planId: plan.id, mode: 'training', style: 'card' }, message: say('Start the rep.') })))
+  const [repRow] = await sql`select mode, training_style, pinned from conversations where id = ${rep.id}`
+  assert.deepEqual([repRow.mode, repRow.training_style], ['training', 'card'])
+  assert.ok(repRow.pinned.training >= 1, 'the rep pins training.md')
+  const loose = { id: crypto.randomUUID() }
+  await post('/api/chat', { id: loose.id, start: { mode: 'training' }, message: say('hi') })
+  assert.equal((await sql`select mode from conversations where id = ${loose.id}`)[0].mode, 'learning', 'training needs a plan')
+  step('training', 'setup session wrote training.md (Method, Rubric); next session is a card-drill rep pinning it; no plan means learning')
 }
 finally {
   await sql`delete from auth.users where email = ${email}`

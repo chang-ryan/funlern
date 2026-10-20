@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import { Conversation } from '@/components/conversation'
 import { currentModelId } from '@/lib/ai/model'
+import { getPlan } from '@/lib/db/plans'
 import { getConversation, getMessages, getThreadMessages, getThreads } from '@/lib/db/queries'
 import { getUserId } from '@/lib/supabase/server'
 
@@ -13,8 +14,8 @@ export default async function ConversationPage({ params }: PageProps<'/c/[id]'>)
   if (!convo)
     notFound()
 
-  const [messages, threads] = await Promise.all([getMessages(id), getThreads(id)])
+  const [messages, threads, plan] = await Promise.all([getMessages(id), getThreads(id), convo.planId ? getPlan(userId, convo.planId) : null])
   const threadsWithMessages = await Promise.all(threads.map(async t => ({ ...t, messages: await getThreadMessages(t.id) })))
 
-  return <Conversation id={id} title={convo.title} model={await currentModelId()} initialMessages={messages} initialThreads={threadsWithMessages} />
+  return <Conversation id={id} title={convo.title} plan={plan ? { id: plan.id, title: plan.title } : undefined} model={await currentModelId()} initialMessages={messages} initialThreads={threadsWithMessages} />
 }

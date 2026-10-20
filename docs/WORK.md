@@ -218,8 +218,7 @@ What to borrow (MIT code can be copied with its license notice):
   - [x] 1.2 Doc templates (fixed headings) and `systemFor(conversation)` in the chat and thread routes; prompt snapshots
   - [x] 1.3 Wizard `/plans/new` (no material yet): one streamed draft call writes the title, brief v1 and syllabus v1
   - [x] 1.4 Plan page `/p/[id]`: sessions list, New learning session, read-only docs drawer; home lists plans, then Uncategorized
-  - [ ] 1.5 Move an Uncategorized chat into a plan (server action `movePlanSession` done; no UI yet)
-  - [ ] 1.6 Index page like Claude's Projects: plan cards in a grid (title, date) with New plan; Uncategorized chats listed below with New chat
+  - [x] 1.6 Home: plans as a list (not cards) with the brief's goal as a one-line description, New plan; Uncategorized below with New chat
 - Plans, step 2: tutor writes and folding
   - [x] 2.1 Drawer editing per section, version history, restore
   - [x] 2.2 Fold `<plan_updated>` (changed sections) into the next learner message; advance `seen`
@@ -230,8 +229,8 @@ What to borrow (MIT code can be copied with its license notice):
   - [ ] 3.3 Material in the wizard draft (capped)
   - [ ] 3.4 `read_material` tool; multi-step replies (`stopWhen`)
 - Plans, step 4: training
-  - [ ] 4.1 `conversations.mode` and `training_style`; New training session with a style; mode block in the system prompt
-  - [ ] 4.2 First training session sets up `training.md` (Method, Rubric) with the learner
+  - [x] 4.1 `conversations.mode` and `training_style`, fixed at creation; Learn/Train and rep style under the plan composer; mode block in the system prompt
+  - [x] 4.2 First training session sets up `training.md` (Method, Rubric) with the learner ("Set up training", or Set up in Files); reps log to Log and Next with `update_doc` until 4.4
   - [ ] 4.3 `set_rep_key` and `session_secrets`; key stripped from the stream and page loads
   - [ ] 4.4 `log_rep`: append the Log row, replace Next, reveal the key
 - [ ] `ask_user` tool and card
@@ -255,6 +254,7 @@ What to borrow (MIT code can be copied with its license notice):
 - [ ] Prompt version hash on messages; add tool definitions to the snapshot once tools are wired
 
 ### Later
+- [ ] Move an Uncategorized chat into a plan: UI (punted 2026-10-20; server action `movePlanSession` exists)
 - [ ] `quiz` tool, card and `quiz_attempts`
 - [ ] Quiz cadence setting and thread-question hints
 - [ ] XP and streak display

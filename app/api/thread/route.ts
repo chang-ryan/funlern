@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     model: await currentModel(),
     // Same system prompt as main, so the frozen prefix reuses main's cache.
     system: await systemFor(convo!),
-    tools: toolsFor({ userId, conversationId: t.conversationId, planId: convo!.planId }),
+    tools: toolsFor({ userId, conversationId: t.conversationId, planId: convo!.planId, mode: convo!.mode }),
     toolChoice: toolChoiceFor(convo!),
     stopWhen: stepCountIs(4),
     // Breakpoint 1 reuses main's cache; breakpoint 2 caches this thread for its next reply.
