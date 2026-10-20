@@ -2,26 +2,66 @@
   "name": "funlern",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@11.0.8",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "db:generate": "drizzle-kit generate --name",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:migrate": "supabase migration up",
+    "db:reset": "supabase db reset",
+    "db:push": "supabase db push",
+    "db:check": "drizzle-kit check && squawk supabase/migrations/*.sql",
+    "test": "vitest run",
+    "test:smoke": "node scripts/smoke.mjs",
+    "prepare": "simple-git-hooks"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.79",
+    "@ai-sdk/react": "^4.0.141",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.117.2",
+    "ai": "^7.0.138",
+    "dedent": "^1.7.2",
+    "drizzle-orm": "^0.45.3",
+    "nanoid": "^6.0.1",
     "next": "16.3.8",
+    "postgres": "^3.4.9",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "remark-breaks": "^4.0.0",
+    "server-only": "^0.0.1",
+    "streamdown": "^2.7.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@antfu/eslint-config": "^9.5.1",
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@eslint-react/eslint-plugin": "^5.23.3",
+    "@next/eslint-plugin-next": "^16.3.8",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.3.8",
+    "dotenv": "^18.0.5",
+    "drizzle-kit": "^0.31.11",
+    "eslint": "^10.11.0",
+    "eslint-plugin-drizzle": "^0.2.3",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "happy-dom": "^20.14.6",
+    "simple-git-hooks": "^2.14.0",
+    "squawk-cli": "^2.68.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.0.3"
   },
-  "packageManager": "pnpm@11.0.8"
+  "simple-git-hooks": {
+    "commit-msg": "pnpm exec commitlint --edit \"$1\""
+  }
 }

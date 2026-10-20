@@ -1,18 +1,20 @@
-import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
+import antfu from '@antfu/eslint-config'
+import drizzle from 'eslint-plugin-drizzle'
 
-const eslintConfig = defineConfig([
-  ...nextVitals,
-  ...nextTs,
-  // Override default ignores of eslint-config-next.
-  globalIgnores([
-    // Default ignores of eslint-config-next:
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
-  ]),
-]);
-
-export default eslintConfig;
+export default antfu({
+  react: true,
+  nextjs: true,
+  ignores: ['supabase/**', 'AGENTS.md', 'CLAUDE.md'],
+}, {
+  rules: {
+    // Next.js inlines NEXT_PUBLIC_* only via the global `process.env`.
+    'node/prefer-global/process': ['error', 'always'],
+  },
+}, {
+  // Drizzle's own rules: no accidental whole-table update or delete.
+  plugins: { drizzle },
+  rules: {
+    'drizzle/enforce-delete-with-where': ['error', { drizzleObjectName: ['db', 'tx'] }],
+    'drizzle/enforce-update-with-where': ['error', { drizzleObjectName: ['db', 'tx'] }],
+  },
+})
