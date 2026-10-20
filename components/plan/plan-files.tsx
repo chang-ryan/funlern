@@ -7,7 +7,7 @@ import { DOC_FILE, DOC_KINDS } from '@/lib/plans/docs'
 const ACTION = 'rounded-lg border border-border px-2 py-0.5 text-xs hover:bg-border disabled:opacity-50 disabled:hover:bg-transparent'
 
 /**
- * The plan's mission control panel: its docs, then material, then the way into mission control, the one session
+ * The plan's mission control panel: its docs, then material. The title opens mission control, the one session
  * for adjusting the plan itself. A doc opens full page in place of the plan's left side.
  */
 export function PlanFiles({ planId, docs, materials, active }: {
@@ -19,7 +19,18 @@ export function PlanFiles({ planId, docs, materials, active }: {
 }) {
   return (
     <section aria-labelledby="plan-files" className="flex flex-col gap-2">
-      <h2 id="plan-files" className="text-sm font-medium text-muted">Mission Control</h2>
+      <h2 id="plan-files" className="text-sm font-medium text-muted">
+        <Link
+          href={`/p/${planId}/mc`}
+          aria-current={active === 'mission' ? 'page' : undefined}
+          className="-ml-2 inline-flex items-center gap-1 rounded-lg px-2 py-0.5 hover:bg-tutor hover:text-foreground aria-[current=page]:text-foreground"
+        >
+          Mission Control
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="size-3.5" aria-hidden>
+            <path d="M6 14 14 6M7.5 6H14v6.5" />
+          </svg>
+        </Link>
+      </h2>
       <ul className="flex flex-col rounded-2xl border border-border bg-surface p-1">
         {DOC_KINDS.map((kind) => {
           const doc = docs.find(d => d.kind === kind)
@@ -59,16 +70,6 @@ export function PlanFiles({ planId, docs, materials, active }: {
           </Link>
         </li>
       </ul>
-      <Link
-        href={`/p/${planId}/mc`}
-        aria-current={active === 'mission' ? 'page' : undefined}
-        className="inline-flex items-center gap-1 self-start rounded-lg px-2 py-1 text-sm text-muted hover:bg-tutor hover:text-foreground aria-[current=page]:text-foreground"
-      >
-        Mission Control
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="size-3.5" aria-hidden>
-          <path d="M6 14 14 6M7.5 6H14v6.5" />
-        </svg>
-      </Link>
     </section>
   )
 }
