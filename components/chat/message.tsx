@@ -3,9 +3,11 @@ import type { ReactNode } from 'react'
 import remarkBreaks from 'remark-breaks'
 import { defaultRemarkPlugins, Streamdown } from 'streamdown'
 import { textOf } from '@/lib/messages'
+import { planUpdateOf } from '@/lib/plans/updates'
 import { quizResultsOf, tallyText } from '@/lib/quiz'
 import { sideQuestionsOf } from '@/lib/threads/side-questions'
 import { CopyButton } from './copy-button'
+import { PlanUpdateNote } from './plan-update-note'
 import { SideQuestionsNote } from './side-questions-note'
 import { TutorAvatar } from './tutor-avatar'
 import { TutorMarkdown } from './tutor-markdown'
@@ -21,9 +23,11 @@ export function Message({ message, streaming, children }: {
 }) {
   if (message.role === 'user') {
     const side = sideQuestionsOf(message)
+    const plan = planUpdateOf(message)
     const results = quizResultsOf(message)
     return (
       <div className="flex flex-col items-end gap-1.5">
+        {plan && <PlanUpdateNote data={plan} />}
         {side && <SideQuestionsNote data={side} />}
         {results
           ? (

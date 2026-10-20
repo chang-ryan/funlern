@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`prompts > plan block 1`] = `
-"This session belongs to the learner's study plan. Its docs follow inside <plan>: brief.md says what they want and why, syllabus.md the units in order. Teach towards the brief, follow the syllabus unless the learner steers elsewhere, and pitch it at their level and seriousness.
+"This session belongs to the learner's study plan. Its docs follow inside <plan>: brief.md says what they want and why, syllabus.md the units in order. Teach towards the brief, follow the syllabus unless the learner steers elsewhere, and pitch it at their level and seriousness. When a doc changes during the session, the changed sections arrive inside <plan_updated> before the learner's next message and replace those sections above.
 
 <plan>
 <doc name="brief.md">

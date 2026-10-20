@@ -144,6 +144,16 @@ try {
   const other = await fetch(`${APP}/api/chat`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ id: crypto.randomUUID(), planId: crypto.randomUUID(), message: say('hi') }) })
   assert.equal(other.status, 404, 'a plan that is not yours is refused')
   step('plan session', `created in the plan, docs pinned, tutor answered "${answer.trim()}"`)
+
+  // An edit made outside the session reaches its tutor on the next message, without touching the system prompt.
+  await until(async () => await count(sql`select count(*)::int from messages where conversation_id = ${ps.id}`) === 2)
+  await sql`insert into plan_doc_versions (doc_id, version, body, author) values (${doc.id}, 2, '## Goal\n\nOrder coffee in Welsh.', 'user')`
+  const edited = await post('/api/chat', { id: ps.id, message: say('And now, in five words or fewer, what is my goal?') })
+  assert.ok(edited.includes('"type":"data-plan-updated"'), 'stream announces the plan update')
+  assert.match(textOf(edited), /coffee/i, 'tutor sees the edited brief')
+  const [after] = await sql`select pinned, seen from conversations where id = ${ps.id}`
+  assert.deepEqual([after.pinned, after.seen], [{ brief: 1 }, { brief: 2 }], 'pinned stays, seen advances')
+  step('plan update', `edit folded into the next message; tutor answered "${textOf(edited).trim()}"`)
 }
 finally {
   await sql`delete from auth.users where email = ${email}`

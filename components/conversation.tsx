@@ -12,6 +12,7 @@ import { anchorFromRange, rangeFromAnchor } from '@/lib/anchor'
 import { useMediaQuery } from '@/lib/hooks/use-media-query'
 import { usePressOutside } from '@/lib/hooks/use-press-outside'
 import { TITLE_PART } from '@/lib/messages'
+import { PLAN_UPDATED } from '@/lib/plans/updates'
 import { activeQuizId, QUIZ_RESULTS, quizIdOf, quizResultsOf } from '@/lib/quiz'
 import { SIDE_QUESTIONS } from '@/lib/threads/side-questions'
 import { AssistantMessage } from './assistant-message'
@@ -89,7 +90,7 @@ export function Conversation({ id, isNew = false, planId, firstMessage, title, m
         setCurrentTitle(current => current ?? part.data as string)
         return
       }
-      if (part.type !== SIDE_QUESTIONS && part.type !== QUIZ_RESULTS)
+      if (part.type !== SIDE_QUESTIONS && part.type !== QUIZ_RESULTS && part.type !== PLAN_UPDATED)
         return
       setMessages((ms) => {
         const i = ms.findLastIndex(m => m.role === 'user')

@@ -1,6 +1,8 @@
 import type { DocVersions } from './schema'
 import type { DocKind } from '@/lib/plans/docs'
+import type { PlanUpdate } from '@/lib/plans/updates'
 import { and, desc, eq, isNull, max } from 'drizzle-orm'
+import { changedSections } from '@/lib/plans/updates'
 import { db } from '.'
 import { conversations, planDocs, planDocVersions, plans } from './schema'
 import 'server-only'
@@ -121,4 +123,27 @@ export async function writeDocVersion(input: { planId: string, kind: DocKind, bo
 export async function setConversationPlan(userId: string, conversationId: string, planId: string | null) {
   const versions = planId ? await latestVersions(planId) : null
   await db.update(conversations).set({ planId, pinned: versions, seen: versions }).where(and(eq(conversations.id, conversationId), eq(conversations.userId, userId)))
+}
+
+/**
+ * Doc changes a session's tutor hasn't seen: for each doc past its `seen` version, the sections that differ.
+ * Returns the update to fold into the next learner message (null when nothing changed) and the new `seen`.
+ */
+export async function foldPlanUpdates(planId: string, seen: DocVersions): Promise<{ data: PlanUpdate | null, seen: DocVersions }> {
+  const latest = await latestVersions(planId)
+  const docs: PlanUpdate['docs'] = []
+  for (const [kind, version] of Object.entries(latest) as [DocKind, number][]) {
+    const from = seen[kind] ?? 0
+    if (version <= from)
+      continue
+    const [before, after] = await Promise.all([from ? getDocVersion(planId, kind, from) : null, getDocVersion(planId, kind, version)])
+    const sections = changedSections(kind, before?.body ?? '', after?.body ?? '')
+    if (Object.keys(sections).length)
+      docs.push({ kind, version, sections })
+  }
+  return { data: docs.length ? { docs } : null, seen: { ...seen, ...latest } }
+}
+
+export async function setSeen(conversationId: string, seen: DocVersions) {
+  await db.update(conversations).set({ seen }).where(eq(conversations.id, conversationId))
 }

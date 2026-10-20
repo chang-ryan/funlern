@@ -10,9 +10,11 @@ import { systemFor } from '@/lib/ai/system'
 import { titleConversation } from '@/lib/ai/title'
 import { TOOL_CHOICE, toolsFor } from '@/lib/ai/tools'
 import { placeTurn } from '@/lib/ai/turn'
+import { foldPlanUpdates, setSeen } from '@/lib/db/plans'
 import { deleteMessagesFrom, getMessages, getOrStartConversation, getThreadsWithMessages, saveMessages, setFoldedThrough } from '@/lib/db/queries'
 import { endQuiz, exitActiveQuizzes, getActiveQuizId, getLearnerQuiz } from '@/lib/db/quizzes'
 import { textOf, TITLE_PART } from '@/lib/messages'
+import { PLAN_UPDATED } from '@/lib/plans/updates'
 import { QUIZ_PART, QUIZ_RESULTS, quizIdOf, quizResultsOf } from '@/lib/quiz'
 import { getUserId } from '@/lib/supabase/server'
 import { foldThreads } from '@/lib/threads/fold'
@@ -56,8 +58,14 @@ export async function POST(req: Request) {
   // Side-thread exchanges since the last turn ride on this user message and are saved with it.
   // A retry keeps the side questions already folded into its saved copy.
   const fold = turn.retry ? null : foldThreads(await getThreadsWithMessages(id))
-  const outgoing: UIMessage = fold
-    ? { ...incoming, parts: [{ type: SIDE_QUESTIONS, data: fold.data }, ...incoming.parts.filter(p => p.type !== SIDE_QUESTIONS)] }
+  // Plan doc changes the tutor hasn't seen ride on this message too, ahead of the side questions.
+  const planFold = !turn.retry && convo.planId ? await foldPlanUpdates(convo.planId, convo.seen ?? {}) : null
+  const added = [
+    ...(planFold?.data ? [{ type: PLAN_UPDATED, data: planFold.data } as const] : []),
+    ...(fold ? [{ type: SIDE_QUESTIONS, data: fold.data } as const] : []),
+  ]
+  const outgoing: UIMessage = added.length
+    ? { ...incoming, parts: [...added, ...incoming.parts.filter(p => p.type !== SIDE_QUESTIONS && p.type !== PLAN_UPDATED)] }
     : incoming
 
   const messages = await validateUIMessages({ messages: [...turn.history, outgoing] })
@@ -68,6 +76,8 @@ export async function POST(req: Request) {
   await saveMessages(id, messages)
   if (fold)
     await setFoldedThrough(fold.foldedThrough)
+  if (planFold)
+    await setSeen(id, planFold.seen)
 
   // The first message names the conversation, alongside the reply. A command says nothing about the topic.
   const question = textOf(incoming).trim()
@@ -152,10 +162,10 @@ function respond(ctx: Ctx, messages: UIMessage[], replyId: string, body: (writer
     originalMessages: messages,
     execute: async ({ writer }) => {
       writer.write({ type: 'start', messageId: replyId })
-      // The server adds to the learner's message (folded side questions, quiz results rebuilt from the
-      // database); send those parts back so the client's copy shows them too.
+      // The server adds to the learner's message (folded side questions and plan changes, quiz results
+      // rebuilt from the database); send those parts back so the client's copy shows them too.
       for (const part of messages.at(-1)!.parts) {
-        if (part.type === SIDE_QUESTIONS || part.type === QUIZ_RESULTS)
+        if (part.type === SIDE_QUESTIONS || part.type === QUIZ_RESULTS || part.type === PLAN_UPDATED)
           writer.write({ type: part.type, data: part.data, transient: true })
       }
       await body(writer)
