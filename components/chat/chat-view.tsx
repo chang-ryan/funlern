@@ -12,7 +12,7 @@ import { ModelPicker } from './model-picker'
 import { ReplyProblem } from './reply-problem'
 
 /** Presentational chat: scrolling transcript + composer. State lives in the caller's useChat. */
-export function ChatView({ messages, status, error, onSend, onStop, onRetry, model, blocked, header, renderTutor, rail, overlay, transcriptRef, onTranscriptClick, onTranscriptPointerMove }: {
+export function ChatView({ messages, status, error, onSend, onStop, onRetry, model, session, blocked, header, renderTutor, rail, overlay, transcriptRef, onTranscriptClick, onTranscriptPointerMove }: {
   messages: UIMessage[]
   status: ChatStatus
   error?: Error
@@ -22,6 +22,8 @@ export function ChatView({ messages, status, error, onSend, onStop, onRetry, mod
   onRetry?: () => void
   /** Model the next turn goes to; the learner can switch it under the composer. */
   model?: string
+  /** Beside the model picker: the session's mode, when it isn't plain learning. */
+  session?: ReactNode
   /** Why the learner can't send right now, e.g. a quiz waiting to be finished. */
   blocked?: string
   header?: ReactNode
@@ -114,7 +116,10 @@ export function ChatView({ messages, status, error, onSend, onStop, onRetry, mod
             </svg>
           </button>
           <Composer onSend={onSend} onStop={onStop} busy={busy} commands={COMMANDS} disabledReason={blocked} />
-          {model && <ModelPicker initial={model} />}
+          <div className="flex items-center gap-3">
+            {model && <ModelPicker initial={model} />}
+            {session}
+          </div>
         </div>
         {rail && <div className="hidden w-rail shrink-0 lg:block" />}
       </div>

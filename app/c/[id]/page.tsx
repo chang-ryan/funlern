@@ -17,5 +17,5 @@ export default async function ConversationPage({ params }: PageProps<'/c/[id]'>)
   const [messages, threads, plan] = await Promise.all([getMessages(id), getThreads(id), convo.planId ? getPlan(userId, convo.planId) : null])
   const threadsWithMessages = await Promise.all(threads.map(async t => ({ ...t, messages: await getThreadMessages(t.id) })))
 
-  return <Conversation id={id} title={convo.title} plan={plan ? { id: plan.id, title: plan.title } : undefined} model={await currentModelId()} initialMessages={messages} initialThreads={threadsWithMessages} />
+  return <Conversation id={id} mode={convo.mode} trainingStyle={convo.trainingStyle} title={convo.title} plan={plan ? { id: plan.id, title: plan.title } : undefined} model={await currentModelId()} initialMessages={messages} initialThreads={threadsWithMessages} />
 }

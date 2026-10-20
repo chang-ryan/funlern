@@ -4,7 +4,7 @@ import type { UIMessage } from 'ai'
 import type { RailItem } from './thread-rail'
 import type { ThreadData } from './types'
 import type { Anchor } from '@/lib/db/schema'
-import type { SessionStart } from '@/lib/plans/modes'
+import type { SessionMode, SessionStart, TrainingStyle } from '@/lib/plans/modes'
 import { Chat, useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
@@ -18,6 +18,7 @@ import { activeQuizId, QUIZ_RESULTS, quizIdOf, quizResultsOf } from '@/lib/quiz'
 import { SIDE_QUESTIONS } from '@/lib/threads/side-questions'
 import { AssistantMessage } from './assistant-message'
 import { ChatView } from './chat/chat-view'
+import { SessionModeChip } from './chat/session-mode'
 import { ConversationHeader } from './conversation-header'
 import { NewThreadCard, ThreadCard } from './thread'
 import { ThreadDrawer } from './thread-drawer'
@@ -42,12 +43,15 @@ const chatTransport = transportFor('/api/chat')
 const threadTransport = transportFor('/api/thread')
 
 /** Persisted conversation with side threads anchored on highlighted passages. */
-export function Conversation({ id, isNew = false, start, firstMessage, title, plan, model, initialMessages, initialThreads }: {
+export function Conversation({ id, isNew = false, start, mode = start?.mode ?? 'learning', trainingStyle = null, firstMessage, title, plan, model, initialMessages, initialThreads }: {
   id: string
   /** Not saved yet: the server creates it with the first message, then the URL becomes /c/{id}. */
   isNew?: boolean
   /** How a new session starts (its plan and mode): sent with the first message, which creates it. */
   start?: SessionStart
+  /** The session's fixed mode, shown under the composer. */
+  mode?: SessionMode
+  trainingStyle?: TrainingStyle | null
   /** Sent as soon as the conversation mounts, e.g. typed on the plan page. */
   firstMessage?: string
   title: string | null
@@ -300,6 +304,7 @@ export function Conversation({ id, isNew = false, start, firstMessage, title, pl
       onStop={stop}
       onRetry={() => regenerate()}
       model={model}
+      session={<SessionModeChip mode={mode} style={trainingStyle} />}
       transcriptRef={transcriptRef}
       header={<ConversationHeader id={id} title={currentTitle} setTitle={setCurrentTitle} saved={saved} plan={plan} />}
       onTranscriptClick={onTranscriptClick}
