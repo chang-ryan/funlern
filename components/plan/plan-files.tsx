@@ -3,11 +3,17 @@ import type { DocKind } from '@/lib/plans/docs'
 import Link from 'next/link'
 import { DOC_FILE, DOC_KINDS } from '@/lib/plans/docs'
 
-// training.md is set up in the plan's first training session; material comes with uploads (step 3).
+// training.md is set up in the plan's first training session.
 const ACTION = 'rounded-lg border border-border px-2 py-0.5 text-xs hover:bg-border disabled:opacity-50 disabled:hover:bg-transparent'
 
 /** The plan's "project files": its docs, then material. A doc opens full page in place of the plan's left side. */
-export function PlanFiles({ planId, docs, active }: { planId: string, docs: PlanDoc[], active?: DocKind }) {
+export function PlanFiles({ planId, docs, materials, active }: {
+  planId: string
+  docs: PlanDoc[]
+  /** How many material files the plan has. */
+  materials: number
+  active?: DocKind | 'material'
+}) {
   return (
     <section aria-labelledby="plan-files" className="flex flex-col gap-2">
       <h2 id="plan-files" className="text-sm font-medium text-muted">Files</h2>
@@ -32,13 +38,23 @@ export function PlanFiles({ planId, docs, active }: { planId: string, docs: Plan
                     <FileRow
                       icon={<DocIcon />}
                       label={<span className="font-mono text-[13px]">{DOC_FILE[kind]}</span>}
-                      action={kind === 'training' ? <Link href={`/p/${planId}?mode=training`} className={ACTION}>Set up</Link> : undefined}
+                      action={kind === 'training' ? <Link href={`/p/${planId}?mode=training`} className={`${ACTION} text-foreground`}>Set up</Link> : undefined}
                     />
                   )}
             </li>
           )
         })}
-        <li><FileRow icon={<MaterialIcon />} label="Material" action={<button type="button" disabled title="Uploads are coming soon" className={ACTION}>Add</button>} /></li>
+        <li>
+          <Link
+            href={`/p/${planId}/material`}
+            aria-current={active === 'material' ? 'page' : undefined}
+            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${active === 'material' ? 'bg-border' : 'hover:bg-border/50'}`}
+          >
+            <MaterialIcon />
+            <span className="min-w-0 flex-1 truncate">Material</span>
+            {materials ? <span className="text-xs text-muted">{`${materials} file${materials === 1 ? '' : 's'}`}</span> : <span className={ACTION}>Add</span>}
+          </Link>
+        </li>
       </ul>
     </section>
   )

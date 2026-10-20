@@ -3,6 +3,7 @@ import type { DocKind } from '@/lib/plans/docs'
 import { boolean, index, integer, jsonb, pgEnum, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
 import { authUsers } from 'drizzle-orm/supabase'
 import { DOC_KINDS } from '@/lib/plans/docs'
+import { MATERIAL_KINDS } from '@/lib/plans/material'
 import { SESSION_MODES, TRAINING_STYLES } from '@/lib/plans/modes'
 
 // RLS on with no policies: blocks the Supabase Data API; Drizzle (table owner) bypasses it.
@@ -50,6 +51,9 @@ export const conversations = pgTable(
     trainingStyle: trainingStyleEnum(),
     pinned: jsonb().$type<DocVersions>(),
     seen: jsonb().$type<DocVersions>(),
+    // Material ids, like the doc versions: what the system prompt was built with, and what was folded in since.
+    pinnedMaterials: jsonb().$type<string[]>(),
+    seenMaterials: jsonb().$type<string[]>(),
     ...timestamps,
   },
   t => [index('conversations_plan_idx').on(t.planId)],
@@ -89,6 +93,29 @@ export const planDocVersions = pgTable(
     ...timestamps,
   },
   t => [unique('plan_doc_versions_doc_version_key').on(t.docId, t.version)],
+).enableRLS()
+
+export const materialKindEnum = pgEnum('material_kind', MATERIAL_KINDS)
+
+// The learner's own material for a plan. Write-once: to change a file, delete it and add another. Deleting
+// only sets deleted_at, so sessions that pinned it keep their system prompt; the original leaves Storage.
+export const planMaterials = pgTable(
+  'plan_materials',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    planId: uuid().notNull().references(() => plans.id, { onDelete: 'cascade' }),
+    kind: materialKindEnum().notNull(),
+    name: text().notNull(),
+    // The original in the materials bucket; null for pasted text, which is its own original.
+    storagePath: text(),
+    // Extracted once at upload, as Markdown.
+    text: text().notNull(),
+    pages: integer(),
+    tokens: integer().notNull(),
+    ...timestamps,
+    deletedAt: timestamp({ withTimezone: true }),
+  },
+  t => [index('plan_materials_plan_idx').on(t.planId)],
 ).enableRLS()
 
 export const roleEnum = pgEnum('role', ['system', 'user', 'assistant'])

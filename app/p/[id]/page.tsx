@@ -7,7 +7,7 @@ import { loadPlan } from './load'
 export default async function PlanPage({ params, searchParams }: PageProps<'/p/[id]'>) {
   const { id } = await params
   const { mode } = await searchParams
-  const { userId, plan, docs } = await loadPlan(id)
+  const { userId, plan, docs, materials } = await loadPlan(id)
   const [sessions, model] = await Promise.all([getPlanSessions(userId, plan.id), currentModelId()])
 
   return (
@@ -17,7 +17,7 @@ export default async function PlanPage({ params, searchParams }: PageProps<'/p/[
       hasTraining={docs.some(d => d.kind === 'training')}
       initialMode={mode === 'training' ? 'training' : 'learning'}
       model={model}
-      files={<PlanFiles planId={plan.id} docs={docs} />}
+      files={<PlanFiles planId={plan.id} docs={docs} materials={materials.length} />}
     />
   )
 }

@@ -14,12 +14,12 @@ export default async function PlanDocPage({ params }: PageProps<'/p/[id]/docs/[k
   if (!DOC_KINDS.includes(param as DocKind))
     notFound()
   const kind = param as DocKind
-  const { plan, docs } = await loadPlan(id)
+  const { plan, docs, materials } = await loadPlan(id)
   const doc = docs.find(d => d.kind === kind)
   const versions = doc ? await getDocVersions(plan.id, kind) : []
 
   return (
-    <PlanShell back={{ href: `/p/${plan.id}`, label: plan.title ?? UNTITLED_PLAN }} files={<PlanFiles planId={plan.id} docs={docs} active={kind} />}>
+    <PlanShell back={{ href: `/p/${plan.id}`, label: plan.title ?? UNTITLED_PLAN }} files={<PlanFiles planId={plan.id} docs={docs} materials={materials.length} active={kind} />}>
       {doc
         ? <DocEditor planId={plan.id} kind={kind} doc={doc} versions={versions} />
         : (

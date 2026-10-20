@@ -3,6 +3,7 @@
 // Calls Claude a few times, so it is opt-in rather than part of `pnpm test`.
 import assert from 'node:assert/strict'
 import { Buffer } from 'node:buffer'
+import { createClient } from '@supabase/supabase-js'
 import { config } from 'dotenv'
 import postgres from 'postgres'
 
@@ -13,6 +14,28 @@ const APP = process.env.APP_URL ?? 'http://localhost:3000'
 const MAILPIT = process.env.MAILPIT_URL ?? 'http://127.0.0.1:55324'
 const email = `smoke-${Date.now()}@example.com`
 const sql = postgres(process.env.DATABASE_URL)
+
+/** A minimal PDF with one Helvetica text line per page; an empty line makes a page with no text layer. */
+function pdfWithPages(lines) {
+  const objects = ['<< /Type /Catalog /Pages 2 0 R >>', '', '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>']
+  const kids = lines.map((line) => {
+    const stream = line ? `BT /F1 12 Tf 72 720 Td (${line}) Tj ET` : ''
+    objects.push(`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`)
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents ${objects.length} 0 R >>`)
+    return `${objects.length} 0 R`
+  })
+  objects[1] = `<< /Type /Pages /Kids [${kids.join(' ')}] /Count ${lines.length} >>`
+  let out = '%PDF-1.4\n'
+  const offsets = objects.map((body, i) => {
+    const at = out.length
+    out += `${i + 1} 0 obj\n${body}\nendobj\n`
+    return at
+  })
+  const xref = out.length
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.map(o => `${String(o).padStart(10, '0')} 00000 n \n`).join('')}`
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`
+  return new TextEncoder().encode(out)
+}
 
 const step = (name, detail = '') => console.log(`ok  ${name}${detail ? ` - ${detail}` : ''}`)
 const textOf = raw => raw.split('\n').filter(l => l.includes('"text-delta"')).map(l => JSON.parse(l.slice(6)).delta).join('')
@@ -191,8 +214,68 @@ try {
   await post('/api/chat', { id: loose.id, start: { mode: 'training' }, message: say('hi') })
   assert.equal((await sql`select mode from conversations where id = ${loose.id}`)[0].mode, 'learning', 'training needs a plan')
   step('training', 'setup session wrote training.md (Method, Rubric); next session is a card-drill rep pinning it; no plan means learning')
+
+  // Material: pasted text is pinned into new sessions; adding or deleting reaches a running one on its next message.
+  const addMaterial = async (fields) => {
+    const form = new FormData()
+    for (const [k, v] of Object.entries(fields)) form.set(k, v)
+    return fetch(`${APP}/api/plans/${plan.id}/materials`, { method: 'POST', headers: { cookie }, body: form })
+  }
+  const pasted = await addMaterial({ name: 'Examiner notes', text: 'The examiner always opens by asking about the weather in Aberystwyth.' })
+  assert.equal(pasted.status, 200, `paste -> ${pasted.status}`)
+  const { id: noteId } = await pasted.json()
+  const ms = { id: crypto.randomUUID() }
+  const opener = textOf(await post('/api/chat', { id: ms.id, start: { planId: plan.id }, message: say('According to my material, what does the examiner open with? Answer in under ten words.') }))
+  assert.match(opener, /weather/i, 'tutor reads pinned material')
+  assert.deepEqual((await sql`select pinned_materials from conversations where id = ${ms.id}`)[0].pinned_materials, [noteId])
+  assert.equal((await addMaterial({ text: 'x'.repeat(120_000) })).status, 422, 'over the token budget is refused')
+
+  await until(async () => await count(sql`select count(*)::int from messages where conversation_id = ${ms.id}`) === 2)
+  assert.equal((await addMaterial({ name: 'Mutations cheat sheet', text: 'Soft mutation after "dy": cath becomes dy gath.' })).status, 200)
+  const added = await post('/api/chat', { id: ms.id, message: say('Per my material, what does cath become after dy? Two words.') })
+  assert.ok(added.includes('"type":"data-plan-updated"') && /gath/i.test(textOf(added)), 'an added file reaches the running session')
+
+  await until(async () => await count(sql`select count(*)::int from messages where conversation_id = ${ms.id}`) === 4)
+  await sql`update plan_materials set deleted_at = now() where id = ${noteId}`
+  const removed = await post('/api/chat', { id: ms.id, message: say('ok') })
+  assert.ok(removed.includes('"removed":[{'), 'a deleted file is announced as removed')
+  assert.match((await sql`select text from plan_materials where id = ${noteId}`)[0].text, /weather/, 'deleted text stays for pinned sessions')
+  step('material', 'pasted file pinned and read; over-budget refused; additions and deletions folded into the running session')
+
+  // Uploads: the original goes to Storage once and its text is extracted once; deleting removes the original.
+  const upload = async (name, type, bytes) => {
+    const form = new FormData()
+    form.set('file', new File([bytes], name, { type }))
+    const res = await fetch(`${APP}/api/plans/${plan.id}/materials`, { method: 'POST', headers: { cookie }, body: form })
+    assert.equal(res.status, 200, `${name} -> ${res.status} ${res.status === 200 ? '' : await res.text()}`)
+    const { id } = await res.json()
+    return (await sql`select kind, text, pages, storage_path from plan_materials where id = ${id}`)[0]
+  }
+  const stored = async path => (await sql`select count(*)::int from storage.objects where bucket_id = 'materials' and name = ${path}`)[0].count
+  await sql`update plan_materials set deleted_at = now() where plan_id = ${plan.id}`
+  const pdf = await upload('closures.pdf', 'application/pdf', pdfWithPages(['A closure is a function bundled with its lexical scope.', 'Closures capture variables, not values.']))
+  assert.equal(pdf.pages, 2)
+  assert.match(pdf.text, /\[page 2\]\n\nClosures capture variables/, 'text layer extracted')
+  assert.equal(await stored(pdf.storage_path), 1, 'original stored')
+  const md = await upload('notes.md', 'text/markdown', new TextEncoder().encode('# Notes\n\nThe planner prefers index scans for selective filters.'))
+  assert.equal(md.kind, 'markdown')
+  assert.equal(await stored(md.storage_path), 1)
+  const scan = await upload('scan.pdf', 'application/pdf', pdfWithPages(['The examiner opens with the weather.', '']))
+  assert.match(scan.text, /weather/i, 'a page with no text sends the PDF to Claude to transcribe')
+  const tooLong = new FormData()
+  tooLong.set('file', new File([pdfWithPages(Array.from({ length: 6 }, (_, i) => `Page ${i + 1} of a long handout.`))], 'long.pdf', { type: 'application/pdf' }))
+  assert.equal((await fetch(`${APP}/api/plans/${plan.id}/materials`, { method: 'POST', headers: { cookie }, body: tooLong })).status, 422, 'a 6-page PDF is refused')
+  step('upload', 'PDF text layer and Markdown stored once with originals in Storage; image-only page transcribed; 6 pages refused')
 }
 finally {
+  // Uploaded originals live in Storage, which deleting the user doesn't reach.
+  const [user] = await sql`select id from auth.users where email = ${email}`
+  if (user && process.env.SUPABASE_SECRET_KEY) {
+    const storage = createClient(API, process.env.SUPABASE_SECRET_KEY).storage.from('materials')
+    const paths = (await sql`select name from storage.objects where bucket_id = 'materials' and name like ${`${user.id}/%`}`).map(r => r.name)
+    if (paths.length)
+      await storage.remove(paths)
+  }
   await sql`delete from auth.users where email = ${email}`
   await sql.end()
 }

@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { DOC_FILE, DOC_SECTIONS, parseDoc, renderDoc } from '@/lib/plans/docs'
 import { changedSections } from '@/lib/plans/updates'
 import { db } from '.'
+import { getActiveMaterials } from './materials'
 import { conversations, planDocs, planDocVersions, plans } from './schema'
 import 'server-only'
 
@@ -137,7 +138,8 @@ export async function writeDocVersion(input: { planId: string, kind: DocKind, bo
 /** Moves a session into a plan (or back to Uncategorized). Its tutor starts from the plan's current docs. */
 export async function setConversationPlan(userId: string, conversationId: string, planId: string | null) {
   const versions = planId ? await latestVersions(planId) : null
-  await db.update(conversations).set({ planId, pinned: versions, seen: versions }).where(and(eq(conversations.id, conversationId), eq(conversations.userId, userId)))
+  const materials = planId ? (await getActiveMaterials(planId)).map(m => m.id) : null
+  await db.update(conversations).set({ planId, pinned: versions, seen: versions, pinnedMaterials: materials, seenMaterials: materials }).where(and(eq(conversations.id, conversationId), eq(conversations.userId, userId)))
 }
 
 /**
@@ -176,6 +178,6 @@ export async function updatePlanDoc(input: { planId: string, conversationId: str
   return version
 }
 
-export async function setSeen(conversationId: string, seen: DocVersions) {
-  await db.update(conversations).set({ seen }).where(eq(conversations.id, conversationId))
+export async function setSeen(conversationId: string, seen: DocVersions, seenMaterials: string[]) {
+  await db.update(conversations).set({ seen, seenMaterials }).where(eq(conversations.id, conversationId))
 }

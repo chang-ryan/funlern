@@ -6,7 +6,11 @@ import { DOC_FILE, parseDoc } from './docs'
 // learner message as this part, so the session's system prompt never changes mid-session.
 export const PLAN_UPDATED = 'data-plan-updated'
 
-export interface PlanUpdate { docs: { kind: DocKind, version: number, sections: Sections }[] }
+export interface PlanUpdate {
+  docs: { kind: DocKind, version: number, sections: Sections }[]
+  /** Material added (with its text) or deleted since the tutor last saw the plan's files. */
+  materials?: { added: { id: string, name: string, text: string }[], removed: { id: string, name: string }[] }
+}
 
 export function planUpdateOf(m: UIMessage): PlanUpdate | undefined {
   const part = m.parts.find(p => p.type === PLAN_UPDATED)
@@ -21,13 +25,17 @@ export function changedSections(kind: DocKind, before: string, after: string): S
   return Object.fromEntries([...names].filter(n => (was[n] ?? '') !== (now[n] ?? '')).map(n => [n, now[n] ?? '']))
 }
 
-const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
-/** How the model sees doc changes, ahead of the learner's text. */
-export function renderPlanUpdate({ docs }: PlanUpdate) {
-  const body = docs.map((d) => {
-    const sections = Object.entries(d.sections).map(([name, text]) => `## ${name}\n\n${escape(text ?? '') || '(now empty)'}`).join('\n\n')
-    return `<doc name="${DOC_FILE[d.kind]}" version="${d.version}">\n${sections}\n</doc>`
-  }).join('\n')
+/** How the model sees doc and material changes, ahead of the learner's text. */
+export function renderPlanUpdate({ docs, materials }: PlanUpdate) {
+  const body = [
+    ...docs.map((d) => {
+      const sections = Object.entries(d.sections).map(([name, text]) => `## ${name}\n\n${escape(text ?? '') || '(now empty)'}`).join('\n\n')
+      return `<doc name="${DOC_FILE[d.kind]}" version="${d.version}">\n${sections}\n</doc>`
+    }),
+    ...(materials?.added ?? []).map(m => `<material name="${escape(m.name)}" added="true">\n${escape(m.text)}\n</material>`),
+    ...(materials?.removed ?? []).map(m => `<material name="${escape(m.name)}" removed="true">The learner deleted this file; don't rely on it any more.</material>`),
+  ].join('\n')
   return `<plan_updated>\n${body}\n</plan_updated>`
 }

@@ -4,6 +4,7 @@ import type { SessionStart } from '@/lib/plans/modes'
 import { and, asc, desc, eq, gte, inArray, isNull, lte, max, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '.'
+import { getActiveMaterials } from './materials'
 import { getPlan, latestVersions } from './plans'
 import { conversations, messages, threadMessages, threads } from './schema'
 import 'server-only'
@@ -42,9 +43,10 @@ export async function getOrStartConversation(userId: string, id: string, start: 
   if (planId && !await getPlan(userId, planId))
     return null
   const versions = planId ? await latestVersions(planId) : null
+  const materials = planId ? (await getActiveMaterials(planId)).map(m => m.id) : null
   const mode = planId && start.mode === 'training' ? 'training' : 'learning'
   const trainingStyle = mode === 'training' && versions?.training ? (start.style ?? 'guided') : null
-  await db.insert(conversations).values({ id, userId, planId, mode, trainingStyle, pinned: versions, seen: versions }).onConflictDoNothing()
+  await db.insert(conversations).values({ id, userId, planId, mode, trainingStyle, pinned: versions, seen: versions, pinnedMaterials: materials, seenMaterials: materials }).onConflictDoNothing()
   return getConversation(userId, id)
 }
 

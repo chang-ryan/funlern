@@ -12,10 +12,18 @@ Needs Docker running (`supabase start` runs Postgres, Auth, Studio and Mailpit i
 
 ```bash
 pnpm install
-cp .env.example .env.local   # then fill in ANTHROPIC_API_KEY and the publishable key
+cp .env.example .env.local   # then fill in the keys below
 pnpm db:start                # local Supabase on ports 553xx; applies supabase/migrations
 pnpm dev
 ```
+
+`.env.local` is gitignored; keys go there, never in `.env.example`. Plan material lives in the private `materials` Storage bucket, defined in `supabase/config.toml`; if a running stack predates it, `supabase seed buckets --local` creates it.
+
+| Variable | Where it comes from |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `supabase status`, "Publishable" (`sb_publishable_…`) |
+| `SUPABASE_SECRET_KEY` | `supabase status`, "Secret" (`sb_secret_…`), not the S3 secret key. Server only: it bypasses RLS, so it must never get a `NEXT_PUBLIC_` prefix |
+| `ANTHROPIC_API_KEY` | console.anthropic.com |
 
 | Local service | URL |
 | --- | --- |
