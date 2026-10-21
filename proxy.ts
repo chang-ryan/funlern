@@ -3,13 +3,8 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 
 const PUBLIC_PATHS = ['/login', '/auth']
-// Dev UI preview: `/scratch` and its unpersisted chat route skip auth (and Supabase) entirely.
-const OPEN_PATHS = ['/scratch', '/api/scratch']
 
 export async function proxy(request: NextRequest) {
-  if (OPEN_PATHS.includes(request.nextUrl.pathname))
-    return NextResponse.next()
-
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient(

@@ -83,63 +83,64 @@ The tutor gets one `web_search` tool that we run ourselves, so it works with eve
 
 ## Data model
 
-Five tables are built in code with a generated migration, not yet applied. Table names are plural to match Supabase's `auth.users`. `profiles` is our side of each account: one row per `auth.users` row, created by a signup trigger. Every `user_id` references `profiles`, so deleting a user cascades through all their data. M1 adds two tables and five columns (marked `M1`).
+All tables are defined in `lib/db/schema.ts`; Drizzle generates the migrations, applied locally (the hosted database is behind, on purpose, while this is a one-user app). Table names are plural to match Supabase's `auth.users`. `profiles` is our side of each account, one row per `auth.users` row, created by a signup trigger. Every `user_id` references `profiles`, so deleting a user cascades through all their data. Rolling summaries (`context_summaries`) are still only planned; see Context management.
 
 ```mermaid
 erDiagram
   AUTH_USERS ||--|| PROFILES : "has"
+  PROFILES ||--o{ PLANS : owns
   PROFILES ||--o{ CONVERSATIONS : owns
+  PLANS ||--o{ PLAN_DOCS : "brief, syllabus, training"
+  PLAN_DOCS ||--o{ PLAN_DOC_VERSIONS : "every save"
+  PLANS ||--o{ PLAN_MATERIALS : "write-once files"
+  PLANS |o--o{ CONVERSATIONS : "sessions (null = Uncategorized)"
   CONVERSATIONS ||--o{ MESSAGES : has
   CONVERSATIONS ||--o{ THREADS : has
   MESSAGES ||--o{ THREADS : "anchors"
   THREADS ||--o{ THREAD_MESSAGES : has
-  CONVERSATIONS ||--o{ CONTEXT_SUMMARIES : "M1"
-  CONTEXT_SUMMARIES |o--o{ THREADS : "M1 forked with"
+  CONVERSATIONS ||--o{ QUIZZES : has
+  QUIZZES ||--o{ QUIZ_QUESTIONS : has
+  QUIZ_QUESTIONS ||--o| QUIZ_ANSWERS : "one answer"
+  PROFILES ||--o{ WEB_SEARCHES : "cap and cost log"
 
-  PROFILES {
-    uuid id PK "= auth.users.id"
-    text display_name
-    timestamptz updated_at
-  }
   CONVERSATIONS {
     uuid id PK
-    uuid user_id FK
+    uuid plan_id FK "null = Uncategorized"
     text title
-    uuid plan_id FK "M1, null = Uncategorized"
+    session_mode mode "learning, training, mission; fixed at start"
+    training_style training_style "guided, full, card"
+    jsonb context "pinned and seen: doc versions and material ids"
+  }
+  PLAN_DOC_VERSIONS {
+    uuid doc_id FK
+    int version
+    text body
+    doc_author author "user or tutor"
+    text summary
+  }
+  PLAN_MATERIALS {
+    uuid plan_id FK
+    material_kind kind "pdf, markdown, paste"
+    text storage_path "original in the materials bucket"
+    text text "extracted once"
+    int tokens
+    timestamptz deleted_at "soft delete"
   }
   MESSAGES {
     text id PK "AI SDK message id"
-    uuid conversation_id FK
-    role role
     jsonb parts
+    jsonb metadata "finishReason; sentOn on learner messages"
     int index
   }
   THREADS {
-    uuid id PK
-    uuid conversation_id FK
     text anchor_message_id FK
     jsonb anchor "quote, prefix, suffix"
-    int snapshot_index
-    thread_status status
-    int folded_through "M1"
-    uuid summary_id FK "M1"
-  }
-  THREAD_MESSAGES {
-    text id PK
-    uuid thread_id FK
-    role role
-    jsonb parts
-    int index
-  }
-  CONTEXT_SUMMARIES {
-    uuid id PK "M1"
-    uuid conversation_id FK
-    int through_index
-    text text
+    int snapshot_index "where the frozen fork stops"
+    int folded_through "exchanges already folded into main"
   }
 ```
 
-Threads point at both the conversation and the exact message they quote; `snapshot_index` marks where the forked context stops. In M1, `threads.summary_id` records which rolling summary was active when the thread was forked. XP and streaks are derived from `quiz_attempts`.
+A plan has at most one `mission` session (a partial unique index). Threads point at both the conversation and the exact message they quote. XP and streaks will be derived from `quiz_answers`.
 
 ## Decisions
 
@@ -255,7 +256,7 @@ What to borrow (MIT code can be copied with its license notice):
 - [ ] Push the `quizzes`, `plans`, `session_modes` and `plan_materials` migrations to hosted (`pnpm db:push`); create the hosted `materials` bucket (`supabase seed buckets --linked`); set `SUPABASE_SECRET_KEY` there
 - [x] New chats are saved on the first message (`/new`, id picked client-side); backing out of an empty chat leaves no row
 - [x] Tutor copy button shows on hover (always on touch); scroll-to-bottom arrow fades in and out (200ms)
-- [x] Model picker under the chat bar: Haiku 5.5 / Sonnet 5.5, saved in a cookie that main, thread and scratch routes read
+- [x] Model picker under the chat bar: Haiku 5.5 / Sonnet 5.5, saved in a cookie that the main and thread routes read
 - [x] Reply hardening: learner message saved before the model call; reply saved from the server's own stream copy (survives dropped connections); finish reason in `metadata`; cut-off/error notice with Retry; retries replace instead of duplicating
 - [ ] Push `threads_folding` and `message_metadata` migrations to hosted (`pnpm db:push`)
 - [ ] Resumable streams (reconnect to an in-flight reply after reload); mid-stream provider retries (`streamRetries`)
@@ -274,7 +275,12 @@ What to borrow (MIT code can be copied with its license notice):
 
 ## Context management
 
-vercel/chatbot has none: it sends the full history every turn. The AI SDK's `pruneMessages` only strips reasoning and tool calls. We build compaction ourselves.
+**Today (built).** Each request sends the whole session, rebuilt from the database:
+- **System prompt:** the tutor's, then for plan sessions a `<plan>` block with the docs and material at the versions the session pinned when it started (`conversations.context.pinned`), then the mode's block (training style, or mission control). Fixed for the session, so it stays cached; threads build the same one.
+- **History:** every message, with what the server added saved on the learner message it rode in on: folded side questions, `<plan_updated>` (doc sections and material added or removed since `context.seen`), and quiz results. Each learner message starts with `<sent>YYYY-MM-DD</sent>`.
+- **Nothing is compacted yet,** so sessions grow without limit; mission control, which never ends, is the first that will need it.
+
+**Compaction (not built).** vercel/chatbot has none: it sends the full history every turn. The AI SDK's `pruneMessages` only strips reasoning and tool calls. We build compaction ourselves.
 
 Proposal: keep the last 20 messages verbatim and fold everything older into one rolling summary, compacted in batches.
 

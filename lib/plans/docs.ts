@@ -12,7 +12,7 @@ export const DOC_SECTIONS = {
   training: ['Method', 'Rubric', 'Log', 'Next'],
 } as const satisfies Record<DocKind, readonly string[]>
 
-export type Section<K extends DocKind> = (typeof DOC_SECTIONS)[K][number]
+type Section<K extends DocKind> = (typeof DOC_SECTIONS)[K][number]
 export type Sections<K extends DocKind = DocKind> = Partial<Record<Section<K>, string>>
 
 /** A doc's markdown: each section under its `##` heading, in template order, empty ones kept. */

@@ -1,6 +1,6 @@
 /** Models the learner can pick under the composer. Client-safe: no provider imports here. */
 export const MODELS = ['claude-haiku-5-5', 'claude-sonnet-5-5'] as const
-export type ModelId = (typeof MODELS)[number]
+type ModelId = (typeof MODELS)[number]
 
 /** Cookie that carries the learner's pick to every route, so the next turn uses it. */
 export const MODEL_COOKIE = 'model'
