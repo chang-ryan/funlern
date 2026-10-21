@@ -88,7 +88,9 @@ await asLearner(APP, 'smoke', async ({ userId, cookie, send, post, addMaterial }
   // A session in a plan pins the plan's docs into its system prompt.
   const plan = await makePlan(userId, { brief: '## Goal\n\nPronounce Welsh place names.', syllabus: '## Units\n\n- [ ] Vowels\n- [ ] Mutations\n\n## Notes\n' })
   const ps = { id: crypto.randomUUID() }
-  assert.ok(echoed(await post('/api/chat', { id: ps.id, start: { planId: plan.id }, message: say('[mock:echo]') })).includes('Pronounce Welsh place names'), 'the brief is in the system prompt')
+  const planEcho = echoed(await post('/api/chat', { id: ps.id, start: { planId: plan.id }, message: say('[mock:echo]') }))
+  assert.ok(planEcho.includes('Pronounce Welsh place names'), 'the brief is in the system prompt')
+  assert.ok(planEcho.includes(`<sent>${new Date().toISOString().slice(0, 10)}</sent>`), 'the learner message carries the day it was sent')
   const [{ context }] = await sql`select context from conversations where id = ${ps.id}`
   assert.deepEqual(context.pinned, { docs: { brief: 1, syllabus: 1 }, materials: [] })
   assert.equal((await send('/api/chat', { id: crypto.randomUUID(), start: { planId: crypto.randomUUID() }, message: say('hi') })).status, 404, 'a plan that is not yours is refused')

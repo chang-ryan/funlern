@@ -4,6 +4,11 @@ import { isToolUIPart } from 'ai'
 // A generated conversation title, sent once on the first turn; transient, so it is never saved on a message.
 export const TITLE_PART = 'data-title'
 
+/** Stamps a new learner message with the day it was sent, so the tutor knows when "now" is. */
+export function stampSent(m: UIMessage, now = new Date()): UIMessage {
+  return { ...m, metadata: { ...(m.metadata as object | undefined), sentOn: now.toISOString().slice(0, 10) } }
+}
+
 export function textOf(m: UIMessage) {
   return m.parts.map(p => (p.type === 'text' ? p.text : '')).join('')
 }

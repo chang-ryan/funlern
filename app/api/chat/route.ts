@@ -20,7 +20,7 @@ import { foldMaterialUpdates } from '@/lib/db/materials'
 import { foldPlanUpdates, setSeen } from '@/lib/db/plans'
 import { deleteMessagesFrom, getMessages, getOrStartConversation, getThreadsWithMessages, saveMessages, setFoldedThrough } from '@/lib/db/queries'
 import { endQuiz, exitActiveQuizzes, getActiveQuizId, getLearnerQuiz } from '@/lib/db/quizzes'
-import { textOf, TITLE_PART } from '@/lib/messages'
+import { stampSent, textOf, TITLE_PART } from '@/lib/messages'
 import { PLAN_UPDATED } from '@/lib/plans/updates'
 import { QUIZ_PART, QUIZ_RESULTS, quizIdOf, quizResultsOf } from '@/lib/quiz'
 import { getUserId } from '@/lib/supabase/server'
@@ -41,7 +41,8 @@ export async function POST(req: Request) {
 
   const stored = await getMessages(id)
   const turn = placeTurn(stored, message)
-  let incoming = turn.message
+  // A retry is the saved copy, which keeps its date; a new message is stamped now.
+  let incoming = turn.retry ? turn.message : stampSent(turn.message)
 
   if (!turn.retry) {
     // An active quiz blocks the chat until its results come in. One no saved message shows (its card

@@ -162,7 +162,11 @@ export const messages = pgTable(
 export interface Anchor { quote: string, prefix: string, suffix: string }
 
 /** Stored on tutor messages. `finishReason` other than 'stop' means the reply was cut off (length, error, dropped stream). */
-export interface MessageMetadata { finishReason?: string }
+export interface MessageMetadata {
+  finishReason?: string
+  /** On learner messages: the day it was sent (YYYY-MM-DD, UTC), saved once so the tutor's history renders the same every turn. */
+  sentOn?: string
+}
 
 export const threads = pgTable(
   'threads',
