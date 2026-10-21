@@ -1,12 +1,14 @@
 'use client'
 
 import type { UIMessage } from 'ai'
+import type { ReactNode } from 'react'
 import type { RailItem } from './thread-rail'
 import type { ThreadData } from './types'
 import type { Anchor } from '@/lib/db/schema'
 import type { SessionMode, SessionStart, TrainingStyle } from '@/lib/plans/modes'
 import { Chat, useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
+import { useRouter } from 'next/navigation'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createThread } from '@/app/actions'
 import { anchorFromRange, rangeFromAnchor } from '@/lib/anchor'
@@ -43,7 +45,7 @@ const chatTransport = transportFor('/api/chat')
 const threadTransport = transportFor('/api/thread')
 
 /** Persisted conversation with side threads anchored on highlighted passages. */
-export function Conversation({ id, isNew = false, start, mode = start?.mode ?? 'learning', trainingStyle = null, firstMessage, title, plan, model, initialMessages, initialThreads }: {
+export function Conversation({ id, isNew = false, start, mode = start?.mode ?? 'learning', trainingStyle = null, firstMessage, intro, suggestions, stayOnPage = false, title, plan, model, initialMessages, initialThreads }: {
   id: string
   /** Not saved yet: the server creates it with the first message, then the URL becomes /c/{id}. */
   isNew?: boolean
@@ -54,6 +56,12 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
   trainingStyle?: TrainingStyle | null
   /** Sent as soon as the conversation mounts, e.g. typed on the plan page. */
   firstMessage?: string
+  /** A panel that stays above the transcript (mission control). */
+  intro?: ReactNode
+  /** Suggested messages on the composer, sent in one click; none unless given. */
+  suggestions?: string[]
+  /** Keep the page's URL once saved (mission control lives at /p/[id]/mc), instead of moving to /c/{id}. */
+  stayOnPage?: boolean
   title: string | null
   /** The plan the session is in, for the breadcrumb. */
   plan?: { id: string, title: string | null }
@@ -86,10 +94,16 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
     return chat
   }
 
+  const router = useRouter()
   const { messages, sendMessage, regenerate, status, error, stop, setMessages } = useChat({
     id,
     messages: initialMessages,
     transport: chatTransport,
+    // A page that shows the plan beside the chat (mission control) re-reads it after each reply, which may have edited it.
+    onFinish: () => {
+      if (stayOnPage)
+        router.refresh()
+    },
     // The server adds folded side questions and rebuilt quiz results to this turn's learner message.
     // On the first turn it also sends the title it generated.
     onData: (part) => {
@@ -120,17 +134,20 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
     // Deferred: in dev, StrictMode's extra cleanup runs useChat's stop(), which would abort a send made now.
     const timer = setTimeout(() => {
       sentFirstRef.current = true
-      sendMessage({ text: firstMessage }, start ? { body: { start } } : undefined)
+      sendMessage({ text: firstMessage }, isNew && start ? { body: { start } } : undefined)
+      // A first message that came in the URL (?do=…) must not be sent again on reload.
+      if (stayOnPage)
+        window.history.replaceState(null, '', window.location.pathname)
     })
     return () => clearTimeout(timer)
-  }, [firstMessage, start, sendMessage])
+  }, [firstMessage, start, isNew, stayOnPage, sendMessage])
 
   // A reply arriving means the server has saved the conversation; give it its real URL.
   const saved = !isNew || messages.some(m => m.role === 'assistant')
   useEffect(() => {
-    if (isNew && saved)
+    if (isNew && saved && !stayOnPage)
       window.history.replaceState(null, '', `/c/${id}`)
-  }, [isNew, saved, id])
+  }, [isNew, saved, id, stayOnPage])
 
   // Show the Ask button for a settled selection inside one finished tutor message.
   useEffect(() => {
@@ -305,6 +322,8 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
       onRetry={() => regenerate()}
       model={model}
       session={<SessionModeChip mode={mode} style={trainingStyle} />}
+      top={intro}
+      suggestions={suggestions && { items: suggestions, onPick: send }}
       transcriptRef={transcriptRef}
       header={<ConversationHeader id={id} title={currentTitle} setTitle={setCurrentTitle} saved={saved} plan={plan} />}
       onTranscriptClick={onTranscriptClick}

@@ -195,11 +195,17 @@ try {
   assert.ok(!(await post('/api/chat', { id: ws.id, message: say('thanks') })).includes('"type":"data-plan-updated"'), 'own write is not folded back')
   step('doc write', 'update_doc ticked Vowels as version 2; tutor went on; not folded back to itself')
 
-  // Training: the plan's first training session sets up training.md; after that, sessions are reps with a style.
-  const setup = { id: crypto.randomUUID() }
-  await post('/api/chat', { id: setup.id, start: { planId: plan.id, mode: 'training', style: 'full' }, message: say('I am training for a Welsh speaking exam in December: a 5 minute conversation with an examiner. Write training.md now without asking me anything: Method is one 5 minute spoken exchange in writing, no help; Rubric is pronunciation, mutations, fluency, each pass or fail.') })
-  const [setupRow] = await sql`select mode, training_style from conversations where id = ${setup.id}`
-  assert.deepEqual([setupRow.mode, setupRow.training_style], ['training', null], 'no training.md yet: a setup session, no style')
+  // Training needs training.md: before it exists a training start is a learning session. Mission control, the
+  // plan's one ongoing session, sets it up; after that, sessions are reps with a style.
+  const early = { id: crypto.randomUUID() }
+  await post('/api/chat', { id: early.id, start: { planId: plan.id, mode: 'training', style: 'full' }, message: say('hi') })
+  assert.equal((await sql`select mode from conversations where id = ${early.id}`)[0].mode, 'learning', 'no training.md yet: training falls back to learning')
+  const mc = { id: crypto.randomUUID() }
+  await post('/api/chat', { id: mc.id, start: { planId: plan.id, mode: 'mission' }, message: say('I am training for a Welsh speaking exam in December: a 5 minute conversation with an examiner. Write training.md now without asking me anything: Method is one 5 minute spoken exchange in writing, no help; Rubric is pronunciation, mutations, fluency, each pass or fail.') })
+  const [mcRow] = await sql`select mode, title from conversations where id = ${mc.id}`
+  assert.deepEqual([mcRow.mode, mcRow.title], ['mission', 'Mission control'])
+  const second = await fetch(`${APP}/api/chat`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ id: crypto.randomUUID(), start: { planId: plan.id, mode: 'mission' }, message: say('hi') }) })
+  assert.equal(second.status, 404, 'a plan has one mission control')
   await until(async () => (await sql`select count(*)::int from plan_docs where plan_id = ${plan.id} and kind = 'training'`)[0].count === 1)
   const [training] = await sql`select v.body, v.author from plan_doc_versions v join plan_docs d on d.id = v.doc_id where d.plan_id = ${plan.id} and d.kind = 'training' order by v.version desc limit 1`
   assert.equal(training.author, 'tutor')
@@ -213,7 +219,7 @@ try {
   const loose = { id: crypto.randomUUID() }
   await post('/api/chat', { id: loose.id, start: { mode: 'training' }, message: say('hi') })
   assert.equal((await sql`select mode from conversations where id = ${loose.id}`)[0].mode, 'learning', 'training needs a plan')
-  step('training', 'setup session wrote training.md (Method, Rubric); next session is a card-drill rep pinning it; no plan means learning')
+  step('training', 'mission control wrote training.md (Method, Rubric); a second one is refused; a card-drill rep pins it; training needs a plan and training.md')
 
   // Material: pasted text is pinned into new sessions; adding or deleting reaches a running one on its next message.
   const addMaterial = async (fields) => {

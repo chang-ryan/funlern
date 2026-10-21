@@ -1,6 +1,7 @@
 import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import type { DocKind } from '@/lib/plans/docs'
-import { boolean, index, integer, jsonb, pgEnum, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
+import { boolean, index, integer, jsonb, pgEnum, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { authUsers } from 'drizzle-orm/supabase'
 import { DOC_KINDS } from '@/lib/plans/docs'
 import { MATERIAL_KINDS } from '@/lib/plans/material'
@@ -56,7 +57,11 @@ export const conversations = pgTable(
     seenMaterials: jsonb().$type<string[]>(),
     ...timestamps,
   },
-  t => [index('conversations_plan_idx').on(t.planId)],
+  t => [
+    index('conversations_plan_idx').on(t.planId),
+    // A plan has one mission control session, which never ends.
+    uniqueIndex('conversations_plan_mission_key').on(t.planId).where(sql`${t.mode} = 'mission'`),
+  ],
 ).enableRLS()
 
 export const docKindEnum = pgEnum('doc_kind', DOC_KINDS)

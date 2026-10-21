@@ -2,8 +2,9 @@ import type { TrainingStyle } from '@/lib/plans/modes'
 import dedent from 'dedent'
 
 /**
- * How to train someone, in every training session (setup and reps). Distilled from a practice scheme a learner
- * derived by hand over weeks of reps, so a learner who doesn't know what to rep can still get a good one.
+ * How to train someone, in every training session and in mission control, which sets training up. Distilled
+ * from a practice scheme a learner derived by hand over weeks of reps, so a learner who doesn't know what to rep
+ * can still get a good one.
  */
 export const TRAINING_PRINCIPLES = dedent`
   In training you are a coach as well as a tutor. Work by these principles:
@@ -19,17 +20,27 @@ export const TRAINING_PRINCIPLES = dedent`
   - The Method and Rubric belong to the learner. When the evidence says one is wrong, propose the change and make it only once they agree.
 `
 
-/** The plan's first training session: training.md's Method and Rubric, designed by the tutor or with the learner. */
+/** The plan's mission control: one ongoing session for shaping the plan itself rather than studying it. */
+export const MISSION_CONTROL = dedent`
+  This is the plan's mission control: the one ongoing session where the learner shapes the plan itself. It isn't for studying the subject.
+  Help them get the plan right. Ask what feels off, propose concrete changes with a sentence on why, and make them with update_doc once they agree; several sections in a row is fine.
+  - brief.md: a goal they could tell they've reached, the real reason, their level, how serious they are, and any deadline.
+  - syllabus.md: units in an order that builds, each one session or a few, grounded in their material when they've added some.
+  - training.md: for practice reps (an interview, an exam, a performance). Set it up as below when they want reps and it's empty; change an existing Method or Rubric only once they agree.
+  When the conversation is new, start from what's in the plan: say in a few lines what the brief and syllabus say and what looks thin or missing, then ask what they'd like to change.
+  If they start studying here, help briefly and suggest a learning session from the plan page. Keep replies short: this is a planning conversation.
+`
+
+/** How mission control sets up training.md's Method and Rubric: designed by the tutor or built with the learner. */
 export const TRAINING_SETUP = dedent`
-  This is the plan's first training session. Set up training.md before any real rep.
-  Find out what they are training for (an interview round, an exam, a performance), its format and date. Ask two or three questions at a time.
+  Setting up training.md, before any real rep: find out what they are training for (an interview round, an exam, a performance), its format and date. Ask two or three questions at a time.
   Then ask whether you should design the method or build it with them, and follow their answer:
   - You design it: run one or two short cold attempts at something close to the real thing, name the cause behind the misses, and write a Method and Rubric that train it. If they'd rather skip the attempts, design from the brief and let the first reps correct it. Explain the design in a few sentences.
   - Together: start from how they already practise, if they do, and use a cold attempt when neither of you knows where they break. Propose each part with a sentence on why, and let them push back.
   Either way, write two sections with update_doc:
   - Method: how one rep runs: what the prompt looks like, what the learner produces, the time limit, what counts as help, and the exit test that ends this stage.
   - Rubric: what an answer is marked on, one line per mark, each pass or fail.
-  Keep each short enough to read in a minute. Log any cold attempts as assisted rows, and leave Next empty. When both are written, tell the learner to start a training session from the plan page.
+  Keep each short enough to read in a minute. Log any cold attempts as assisted rows, and leave Next empty. When both are written, tell the learner to start a training session from the plan page (Train).
 `
 
 const STYLE: Record<TrainingStyle, string> = {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TRAINING_PRINCIPLES, TRAINING_SETUP, trainingRep } from './mode'
+import { MISSION_CONTROL, TRAINING_PRINCIPLES, TRAINING_SETUP, trainingRep } from './mode'
 import { planBlock } from './plan'
 import { SYSTEM_PROMPT } from './system'
 import { planDraftPrompt } from './tasks/plan-draft'
@@ -31,9 +31,13 @@ describe('prompts', () => {
     expect(transcribePrompt(3)).toMatchSnapshot()
   })
 
+  it('mission control', () => {
+    expect(MISSION_CONTROL).toMatchSnapshot()
+    expect(TRAINING_SETUP).toMatchSnapshot()
+  })
+
   it('training', () => {
     expect(TRAINING_PRINCIPLES).toMatchSnapshot()
-    expect(TRAINING_SETUP).toMatchSnapshot()
     expect(trainingRep('guided')).toMatchSnapshot()
     expect(trainingRep('full')).toMatchSnapshot()
     expect(trainingRep('card')).toMatchSnapshot()
@@ -41,6 +45,7 @@ describe('prompts', () => {
 
   it('plan draft', () => {
     expect(planDraftPrompt({ what: 'Rust <ownership>', why: '', level: 'some', seriousness: 'serious', deadline: '2026-12-01' })).toMatchSnapshot()
+    expect(planDraftPrompt({ what: 'Welsh', why: 'An exam', level: 'new', seriousness: 'steady' }, [{ name: 'exam "guide".pdf', text: '[page 1]\n\nPart A: <conversation>' }])).toMatchSnapshot()
   })
 
   it('title', () => {

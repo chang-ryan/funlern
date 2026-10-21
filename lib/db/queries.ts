@@ -31,7 +31,7 @@ export async function getConversation(userId: string, id: string) {
  * A new chat has no row until its first message, so backing out of an empty chat leaves nothing behind.
  * The client picks the id; one that is malformed or belongs to someone else comes back null. A new
  * session in a plan pins the plan's current docs; a plan that isn't the learner's is refused. Training
- * needs a plan; until the plan has training.md, a training session sets it up and has no style.
+ * needs a plan with training.md (mission control sets it up).
  */
 export async function getOrStartConversation(userId: string, id: string, start: SessionStart = {}) {
   if (!z.uuid().safeParse(id).success)
@@ -44,9 +44,12 @@ export async function getOrStartConversation(userId: string, id: string, start: 
     return null
   const versions = planId ? await latestVersions(planId) : null
   const materials = planId ? (await getActiveMaterials(planId)).map(m => m.id) : null
-  const mode = planId && start.mode === 'training' ? 'training' : 'learning'
-  const trainingStyle = mode === 'training' && versions?.training ? (start.style ?? 'guided') : null
-  await db.insert(conversations).values({ id, userId, planId, mode, trainingStyle, pinned: versions, seen: versions, pinnedMaterials: materials, seenMaterials: materials }).onConflictDoNothing()
+  // Training needs training.md, which mission control sets up; until then a training start is a learning session.
+  const mode = !planId ? 'learning' : start.mode === 'mission' ? 'mission' : start.mode === 'training' && versions?.training ? 'training' : 'learning'
+  const trainingStyle = mode === 'training' ? (start.style ?? 'guided') : null
+  // A plan's mission control has a fixed title; a second one for the same plan hits the unique index and comes back null.
+  const title = mode === 'mission' ? 'Mission control' : null
+  await db.insert(conversations).values({ id, userId, planId, mode, trainingStyle, title, pinned: versions, seen: versions, pinnedMaterials: materials, seenMaterials: materials }).onConflictDoNothing()
   return getConversation(userId, id)
 }
 
