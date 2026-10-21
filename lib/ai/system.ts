@@ -6,7 +6,7 @@ import { planBlock } from './prompts/plan'
 import { SYSTEM_PROMPT } from './prompts/system'
 import 'server-only'
 
-type Conversation = Pick<typeof conversations.$inferSelect, 'planId' | 'pinned' | 'pinnedMaterials' | 'mode' | 'trainingStyle'>
+type Conversation = Pick<typeof conversations.$inferSelect, 'planId' | 'context' | 'mode' | 'trainingStyle'>
 
 /**
  * The system prompt for a session: the tutor's, plus its plan's docs and material as pinned when it started,
@@ -17,8 +17,8 @@ export async function systemFor(conversation: Conversation) {
   if (!conversation.planId)
     return SYSTEM_PROMPT
   const [docs, materials] = await Promise.all([
-    getPlanDocs(conversation.planId, conversation.pinned ?? undefined),
-    getMaterialsByIds(conversation.planId, conversation.pinnedMaterials ?? []),
+    getPlanDocs(conversation.planId, conversation.context?.pinned.docs),
+    getMaterialsByIds(conversation.planId, conversation.context?.pinned.materials ?? []),
   ])
   const parts = [SYSTEM_PROMPT, planBlock(docs, materials)]
   if (conversation.mode === 'mission')

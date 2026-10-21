@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useRef, useState, useTransition } from 'react'
 import { draftPlan, startPlan } from '@/lib/plans/actions'
 import { MATERIAL_LIMITS } from '@/lib/plans/material'
+import { uploadMaterial } from '@/lib/plans/upload'
 import { LEVELS, SERIOUSNESS } from '@/lib/plans/wizard'
 
 /** Material picked in the form, uploaded once the plan exists. */
@@ -56,18 +57,8 @@ export function WizardForm() {
   }
 
   async function upload(planId: string, pick: Pick) {
-    const body = new FormData()
-    if (pick.kind === 'file') {
-      body.set('file', pick.file)
-    }
-    else {
-      body.set('name', pick.name)
-      body.set('text', pick.text)
-    }
-    const res = await fetch(`/api/plans/${planId}/materials`, { method: 'POST', body }).catch(() => null)
-    if (res?.ok)
-      return null
-    return `${pickName(pick)}: ${(await res?.json().catch(() => null))?.error ?? 'couldn\'t be added'}`
+    const refusal = await uploadMaterial(planId, pick.kind === 'file' ? { file: pick.file } : pick)
+    return refusal && `${pickName(pick)}: ${refusal}`
   }
 
   function submit() {

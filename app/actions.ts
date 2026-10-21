@@ -2,19 +2,11 @@
 
 import type { Anchor } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
-import { redirect } from 'next/navigation'
+import { requireUser } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { getConversation, getLatestMessageIndex, getMessage } from '@/lib/db/queries'
 import { answerQuestion, getLearnerQuiz } from '@/lib/db/quizzes'
 import { conversations, threads } from '@/lib/db/schema'
-import { getUserId } from '@/lib/supabase/server'
-
-async function requireUser() {
-  const userId = await getUserId()
-  if (!userId)
-    redirect('/login')
-  return userId
-}
 
 /** Renames a conversation; an empty title clears it. */
 export async function renameConversation(id: string, title: string | null) {

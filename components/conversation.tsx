@@ -11,13 +11,13 @@ import { DefaultChatTransport } from 'ai'
 import { useRouter } from 'next/navigation'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createThread } from '@/app/actions'
+import { isAddedPart } from '@/lib/added-parts'
 import { anchorFromRange, rangeFromAnchor } from '@/lib/anchor'
+import { fetchOrThrow } from '@/lib/fetch'
 import { useMediaQuery } from '@/lib/hooks/use-media-query'
 import { usePressOutside } from '@/lib/hooks/use-press-outside'
 import { TITLE_PART } from '@/lib/messages'
-import { PLAN_UPDATED } from '@/lib/plans/updates'
 import { activeQuizId, QUIZ_RESULTS, quizIdOf, quizResultsOf } from '@/lib/quiz'
-import { SIDE_QUESTIONS } from '@/lib/threads/side-questions'
 import { AssistantMessage } from './assistant-message'
 import { ChatView } from './chat/chat-view'
 import { SessionModeChip } from './chat/session-mode'
@@ -38,6 +38,7 @@ const HIGHLIGHT_CSS = `
 function transportFor(api: string) {
   return new DefaultChatTransport({
     api,
+    fetch: fetchOrThrow,
     prepareSendMessagesRequest: ({ id, messages, body }) => ({ body: { ...body, id, message: messages.at(-1) } }),
   })
 }
@@ -111,7 +112,7 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
         setCurrentTitle(current => current ?? part.data as string)
         return
       }
-      if (part.type !== SIDE_QUESTIONS && part.type !== QUIZ_RESULTS && part.type !== PLAN_UPDATED)
+      if (!isAddedPart(part.type))
         return
       setMessages((ms) => {
         const i = ms.findLastIndex(m => m.role === 'user')

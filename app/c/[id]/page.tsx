@@ -3,6 +3,7 @@ import { Conversation } from '@/components/conversation'
 import { currentModelId } from '@/lib/ai/model'
 import { getPlan } from '@/lib/db/plans'
 import { getConversation, getMessages, getThreadMessages, getThreads } from '@/lib/db/queries'
+import { livesOnPlanPage } from '@/lib/plans/modes'
 import { getUserId } from '@/lib/supabase/server'
 
 export default async function ConversationPage({ params }: PageProps<'/c/[id]'>) {
@@ -14,7 +15,7 @@ export default async function ConversationPage({ params }: PageProps<'/c/[id]'>)
   if (!convo)
     notFound()
   // Mission control always lives on its plan's page.
-  if (convo.mode === 'mission' && convo.planId)
+  if (livesOnPlanPage(convo.mode) && convo.planId)
     redirect(`/p/${convo.planId}/mc`)
 
   const [messages, threads, plan] = await Promise.all([getMessages(id), getThreads(id), convo.planId ? getPlan(userId, convo.planId) : null])

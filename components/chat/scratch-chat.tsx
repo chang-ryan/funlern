@@ -3,6 +3,7 @@
 import type { UIMessage } from 'ai'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
+import { fetchOrThrow } from '@/lib/fetch'
 import { ChatView } from './chat-view'
 
 const SEED: UIMessage[] = [
@@ -22,7 +23,7 @@ const SEED: UIMessage[] = [
 export function ScratchChat({ model }: { model: string }) {
   const { messages, sendMessage, status, error, stop, setMessages } = useChat({
     messages: SEED,
-    transport: new DefaultChatTransport({ api: '/api/scratch' }),
+    transport: new DefaultChatTransport({ api: '/api/scratch', fetch: fetchOrThrow }),
   })
 
   return (

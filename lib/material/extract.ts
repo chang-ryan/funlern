@@ -1,15 +1,12 @@
-import { anthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { extractText, getDocumentProxy } from 'unpdf'
+import { NO_THINKING, taskModel } from '@/lib/ai/model'
 import { transcribePrompt } from '@/lib/ai/prompts/tasks/transcribe'
 import { MATERIAL_LIMITS } from '@/lib/plans/material'
 import 'server-only'
 
 // Fewer characters than this on a page means it is probably an image (a scan, a slide): transcribe it instead.
 const SPARSE_PAGE = 40
-
-// Transcription is a side task: always the fast model, whatever the learner picked for the tutor.
-const TRANSCRIBE_MODEL = 'claude-haiku-5-5'
 
 /** Why a PDF can't be extracted, worded for the learner. */
 export class ExtractError extends Error {}
@@ -28,12 +25,12 @@ export async function extractPdf(bytes: Uint8Array): Promise<{ text: string, pag
     throw new ExtractError(`Some pages of this PDF have no text (scans or images), and transcribing is limited to ${MATERIAL_LIMITS.transcribePages} pages; this one has ${totalPages}.`)
 
   const result = await generateText({
-    model: anthropic(TRANSCRIBE_MODEL),
+    model: taskModel(),
     messages: [{ role: 'user', content: [
       { type: 'file', data: bytes, mediaType: 'application/pdf' },
       { type: 'text', text: transcribePrompt(totalPages) },
     ] }],
-    providerOptions: { anthropic: { thinking: { type: 'disabled' } } },
+    providerOptions: NO_THINKING,
   })
   return { text: result.text.trim(), pages: totalPages, transcribed: true }
 }

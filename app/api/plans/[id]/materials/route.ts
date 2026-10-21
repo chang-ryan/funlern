@@ -1,5 +1,6 @@
 import type { MaterialKind } from '@/lib/plans/material'
 import { revalidatePath } from 'next/cache'
+import { errorResponse, NOT_FOUND, UNAUTHORIZED } from '@/lib/auth'
 import { getActiveMaterials, insertMaterial } from '@/lib/db/materials'
 import { getPlan } from '@/lib/db/plans'
 import { ExtractError, extractPdf } from '@/lib/material/extract'
@@ -7,7 +8,7 @@ import { estimateTokens, MATERIAL_LIMITS, materialRefusal } from '@/lib/plans/ma
 import { createAdminClient, MATERIALS_BUCKET } from '@/lib/supabase/admin'
 import { getUserId } from '@/lib/supabase/server'
 
-const refuse = (error: string, status = 422) => Response.json({ error }, { status })
+const refuse = (error: string, status = 422) => errorResponse(status, error)
 
 /**
  * Adds one file to a plan's material: an uploaded PDF or Markdown file (form field `file`), or pasted text
@@ -16,11 +17,11 @@ const refuse = (error: string, status = 422) => Response.json({ error }, { statu
 export async function POST(req: Request, { params }: RouteContext<'/api/plans/[id]/materials'>) {
   const userId = await getUserId()
   if (!userId)
-    return new Response('Unauthorized', { status: 401 })
+    return UNAUTHORIZED()
   const { id: planId } = await params
   const plan = await getPlan(userId, planId)
   if (!plan)
-    return new Response('Not found', { status: 404 })
+    return NOT_FOUND()
 
   const form = await req.formData()
   const file = form.get('file')

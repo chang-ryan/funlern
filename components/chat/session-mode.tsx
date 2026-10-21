@@ -1,6 +1,6 @@
 import type { SessionMode, TrainingStyle } from '@/lib/plans/modes'
 import { useId } from 'react'
-import { sessionLabel, TRAINING_STYLE_HINT } from '@/lib/plans/modes'
+import { sessionLabel, sessionTip } from '@/lib/plans/modes'
 
 /** Under the composer in a training or mission control session: which kind, with a hover tip on what it's for. Learning shows nothing. */
 export function SessionModeChip({ mode, style }: { mode: SessionMode, style: TrainingStyle | null }) {
@@ -8,16 +8,12 @@ export function SessionModeChip({ mode, style }: { mode: SessionMode, style: Tra
   const label = sessionLabel(mode, style)
   if (!label)
     return null
-  const tip = mode === 'mission'
-    ? 'The one ongoing session for shaping this plan: its brief, syllabus and training.md. Study in learning sessions.'
-    : style
-      ? `A practice rep: run by training.md's Method and marked with its Rubric, then logged. ${TRAINING_STYLE_HINT[style]}.`
-      : 'This session sets up training.md with you: how a rep runs (Method) and how it\'s marked (Rubric). Reps start in your next training session.'
+  const tip = sessionTip(mode, style)
 
   return (
     <span className="group relative mt-1.5 inline-flex items-center gap-1 px-1 py-0.5 text-xs text-muted">
       {label}
-      <button type="button" aria-label={mode === 'mission' ? 'What mission control is' : 'What training means'} aria-describedby={tipId} className="rounded-full hover:text-foreground focus-visible:text-foreground focus-visible:outline-none">
+      <button type="button" aria-label={tip.label} aria-describedby={tipId} className="rounded-full hover:text-foreground focus-visible:text-foreground focus-visible:outline-none">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" className="size-3.5" aria-hidden>
           <circle cx="10" cy="10" r="7.25" />
           <path d="M10 9v4.5" strokeLinecap="round" />
@@ -29,7 +25,7 @@ export function SessionModeChip({ mode, style }: { mode: SessionMode, style: Tra
         role="tooltip"
         className="pointer-events-none absolute bottom-full left-0 z-10 mb-1.5 w-64 rounded-lg border border-border bg-surface px-3 py-2 text-xs leading-relaxed text-foreground opacity-0 shadow-lg transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100"
       >
-        {tip}
+        {tip.text}
       </span>
     </span>
   )

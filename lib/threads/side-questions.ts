@@ -1,4 +1,5 @@
 import type { UIMessage } from 'ai'
+import { escape } from '@/lib/ai/prompts/xml'
 
 // Thread exchanges folded into main ride on the next main user message as this data part.
 export const SIDE_QUESTIONS = 'data-side-questions'
@@ -18,8 +19,6 @@ export function sideQuestionsOf(m: UIMessage): SideQuestionsData | undefined {
   const part = m.parts.find(p => p.type === SIDE_QUESTIONS)
   return part && 'data' in part ? part.data as SideQuestionsData : undefined
 }
-
-const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 /** How the model sees folded side questions, ahead of the user's text. */
 export function renderSideQuestions({ questions }: SideQuestionsData) {

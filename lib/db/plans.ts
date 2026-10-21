@@ -1,4 +1,4 @@
-import type { DocVersions } from './schema'
+import type { DocVersions, PlanSnapshot, SessionContext } from './schema'
 import type { DocKind } from '@/lib/plans/docs'
 import type { PlanUpdate } from '@/lib/plans/updates'
 import { and, desc, eq, isNull, max, ne, sql } from 'drizzle-orm'
@@ -125,28 +125,47 @@ export async function latestVersions(planId: string): Promise<DocVersions> {
  * The doc row is locked so two writers can't take the same number. Callers check plan ownership.
  */
 export async function writeDocVersion(input: { planId: string, kind: DocKind, body: string, author: 'user' | 'tutor', conversationId?: string, summary?: string }) {
+  return (await editDoc({ ...input, body: () => input.body })).version
+}
+
+/**
+ * Writes a new version computed from the current one, under the doc's row lock, so two writers at once (the
+ * tutor calling update_doc twice in a turn) each build on the other instead of one overwriting the other.
+ * Returns the new version and the one it was built on (0 for a doc's first).
+ */
+async function editDoc(input: { planId: string, kind: DocKind, body: (current: string) => string, author: 'user' | 'tutor', conversationId?: string, summary?: string }) {
   return db.transaction(async (tx) => {
     await tx.insert(planDocs).values({ planId: input.planId, kind: input.kind }).onConflictDoNothing()
     const [doc] = await tx.select({ id: planDocs.id }).from(planDocs).where(and(eq(planDocs.planId, input.planId), eq(planDocs.kind, input.kind))).for('update')
-    const [{ latest }] = await tx.select({ latest: max(planDocVersions.version) }).from(planDocVersions).where(eq(planDocVersions.docId, doc.id))
-    const version = (latest ?? 0) + 1
+    const [latest] = await tx.select({ version: planDocVersions.version, body: planDocVersions.body }).from(planDocVersions).where(eq(planDocVersions.docId, doc.id)).orderBy(desc(planDocVersions.version)).limit(1)
+    const version = (latest?.version ?? 0) + 1
     await tx.insert(planDocVersions).values({
       docId: doc.id,
       version,
-      body: input.body,
+      body: input.body(latest?.body ?? ''),
       author: input.author,
       conversationId: input.conversationId ?? null,
       summary: input.summary ?? null,
     })
-    return version
+    return { version, previous: latest?.version ?? 0 }
   })
 }
 
 /** Moves a session into a plan (or back to Uncategorized). Its tutor starts from the plan's current docs. */
 export async function setConversationPlan(userId: string, conversationId: string, planId: string | null) {
-  const versions = planId ? await latestVersions(planId) : null
-  const materials = planId ? (await getActiveMaterials(planId)).map(m => m.id) : null
-  await db.update(conversations).set({ planId, pinned: versions, seen: versions, pinnedMaterials: materials, seenMaterials: materials }).where(and(eq(conversations.id, conversationId), eq(conversations.userId, userId)))
+  await db.update(conversations).set({ planId, context: planId ? await startingContext(planId) : null }).where(and(eq(conversations.id, conversationId), eq(conversations.userId, userId)))
+}
+
+/** What a plan holds now: its docs' latest versions and its material's ids. */
+export async function planSnapshot(planId: string): Promise<PlanSnapshot> {
+  const [docs, materials] = await Promise.all([latestVersions(planId), getActiveMaterials(planId)])
+  return { docs, materials: materials.map(m => m.id) }
+}
+
+/** A new session in a plan starts from what the plan holds now, both pinned and seen. */
+export async function startingContext(planId: string): Promise<SessionContext> {
+  const now = await planSnapshot(planId)
+  return { pinned: now, seen: now }
 }
 
 /**
@@ -176,15 +195,21 @@ export async function foldPlanUpdates(planId: string, seen: DocVersions): Promis
 export async function updatePlanDoc(input: { planId: string, conversationId: string, doc: DocKind, section: string, content: string, summary: string }) {
   if (!(DOC_SECTIONS[input.doc] as readonly string[]).includes(input.section))
     throw new Error(`${DOC_FILE[input.doc]} has no section "${input.section}". Its sections: ${DOC_SECTIONS[input.doc].join(', ')}.`)
-  const current = (await getPlanDocs(input.planId)).find(d => d.kind === input.doc)
-  const body = renderDoc(input.doc, { ...parseDoc(input.doc, current?.body ?? ''), [input.section]: input.content })
-  const version = await writeDocVersion({ planId: input.planId, kind: input.doc, body, author: 'tutor', conversationId: input.conversationId, summary: input.summary })
+  const { version, previous } = await editDoc({
+    planId: input.planId,
+    kind: input.doc,
+    body: current => renderDoc(input.doc, { ...parseDoc(input.doc, current), [input.section]: input.content }),
+    author: 'tutor',
+    conversationId: input.conversationId,
+    summary: input.summary,
+  })
   await db.update(conversations)
-    .set({ seen: sql`coalesce(${conversations.seen}, '{}'::jsonb) || jsonb_build_object(${input.doc}::text, ${version}::int)` })
-    .where(and(eq(conversations.id, input.conversationId), sql`coalesce((${conversations.seen} ->> ${input.doc}::text)::int, 0) = ${current?.version ?? 0}`))
+    .set({ context: sql`jsonb_set(${conversations.context}, array['seen', 'docs', ${input.doc}::text], to_jsonb(${version}::int))` })
+    .where(and(eq(conversations.id, input.conversationId), sql`coalesce((${conversations.context} #>> array['seen', 'docs', ${input.doc}::text])::int, 0) = ${previous}`))
   return version
 }
 
-export async function setSeen(conversationId: string, seen: DocVersions, seenMaterials: string[]) {
-  await db.update(conversations).set({ seen, seenMaterials }).where(eq(conversations.id, conversationId))
+/** Records what has now been folded into a session, leaving what it pinned at start. */
+export async function setSeen(conversationId: string, seen: PlanSnapshot) {
+  await db.update(conversations).set({ context: sql`jsonb_set(${conversations.context}, '{seen}', ${JSON.stringify(seen)}::jsonb)` }).where(eq(conversations.id, conversationId))
 }

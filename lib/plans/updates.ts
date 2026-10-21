@@ -1,5 +1,6 @@
 import type { UIMessage } from 'ai'
 import type { DocKind, Sections } from './docs'
+import { escape, tag } from '@/lib/ai/prompts/xml'
 import { DOC_FILE, parseDoc } from './docs'
 
 // Doc changes the tutor hasn't seen (the learner's edits, writes from other sessions) ride on the next
@@ -25,8 +26,6 @@ export function changedSections(kind: DocKind, before: string, after: string): S
   return Object.fromEntries([...names].filter(n => (was[n] ?? '') !== (now[n] ?? '')).map(n => [n, now[n] ?? '']))
 }
 
-const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-
 /** How the model sees doc and material changes, ahead of the learner's text. */
 export function renderPlanUpdate({ docs, materials }: PlanUpdate) {
   const body = [
@@ -34,8 +33,8 @@ export function renderPlanUpdate({ docs, materials }: PlanUpdate) {
       const sections = Object.entries(d.sections).map(([name, text]) => `## ${name}\n\n${escape(text ?? '') || '(now empty)'}`).join('\n\n')
       return `<doc name="${DOC_FILE[d.kind]}" version="${d.version}">\n${sections}\n</doc>`
     }),
-    ...(materials?.added ?? []).map(m => `<material name="${escape(m.name)}" added="true">\n${escape(m.text)}\n</material>`),
-    ...(materials?.removed ?? []).map(m => `<material name="${escape(m.name)}" removed="true">The learner deleted this file; don't rely on it any more.</material>`),
+    ...(materials?.added ?? []).map(m => tag('material', { name: m.name, added: true }, m.text)),
+    ...(materials?.removed ?? []).map(m => tag('material', { name: m.name, removed: true }, 'The learner deleted this file; don\'t rely on it any more.')),
   ].join('\n')
   return `<plan_updated>\n${body}\n</plan_updated>`
 }

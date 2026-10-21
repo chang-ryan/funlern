@@ -1,5 +1,6 @@
 import type { WizardInput } from '@/lib/plans/wizard'
 import dedent from 'dedent'
+import { escape, tag } from '../xml'
 
 const SERIOUSNESS = {
   casual: 'Casual: learning for fun. The syllabus is a loose map, not a schedule.',
@@ -7,11 +8,9 @@ const SERIOUSNESS = {
   serious: 'Serious: working towards a goal. Units should build to it, hardest gaps first.',
 }
 
-const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-
 /** Drafts a new plan's title, brief and syllabus from the new-plan form and any material. Its own call. */
 export function planDraftPrompt(input: WizardInput, material: { name: string, text: string }[] = []) {
-  const files = material.map(m => `<material name="${escape(m.name).replace(/"/g, '&quot;')}">\n${escape(m.text.trim())}\n</material>`).join('\n')
+  const files = material.map(m => tag('material', { name: m.name }, m.text.trim())).join('\n')
   return dedent`
     A learner is starting a study plan in funlern, a tutoring app. Draft the plan from their answers below.
 

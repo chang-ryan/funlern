@@ -18,7 +18,9 @@
     "db:check": "drizzle-kit check && squawk supabase/migrations/*.sql",
     "test": "vitest run",
     "test:smoke": "node scripts/smoke.mjs",
-    "prepare": "simple-git-hooks"
+    "prepare": "simple-git-hooks",
+    "dev:mock": "MOCK_MODEL=1 next dev --port 3100",
+    "test:evals": "node scripts/evals.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.79",
@@ -40,6 +42,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@ai-sdk/provider": "4.0.27",
     "@antfu/eslint-config": "^9.5.1",
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",

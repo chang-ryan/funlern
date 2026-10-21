@@ -2,21 +2,12 @@
 
 import type { DocKind, Sections } from '@/lib/plans/docs'
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { getDocVersion, getPlan, latestVersions, writeDocVersion } from '@/lib/db/plans'
+import { requirePlan } from '@/lib/auth'
+import { getDocVersion, latestVersions, writeDocVersion } from '@/lib/db/plans'
 import { DOC_KINDS, DOC_SECTIONS, parseDoc, renderDoc } from '@/lib/plans/docs'
-import { getUserId } from '@/lib/supabase/server'
 
 export type SaveResult = { ok: true, version: number } | { ok: false, error: string }
-
-async function requirePlan(planId: string) {
-  const userId = await getUserId()
-  if (!userId)
-    redirect('/login')
-  if (!z.uuid().safeParse(planId).success || !await getPlan(userId, planId))
-    throw new Error('Not found')
-}
 
 const kindSchema = z.enum(DOC_KINDS)
 

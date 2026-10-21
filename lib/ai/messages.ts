@@ -1,13 +1,23 @@
 import type { UIMessage } from 'ai'
+import type { AddedPart } from '@/lib/added-parts'
 import type { PlanUpdate } from '@/lib/plans/updates'
 import type { QuizResults } from '@/lib/quiz'
 import type { SideQuestionsData } from '@/lib/threads/side-questions'
 import { convertToModelMessages } from 'ai'
+import { isAddedPart } from '@/lib/added-parts'
 import { PLAN_UPDATED, renderPlanUpdate } from '@/lib/plans/updates'
 import { QUIZ_RESULTS } from '@/lib/quiz'
 import { renderSideQuestions, SIDE_QUESTIONS } from '@/lib/threads/side-questions'
 import { parseCommand } from './commands'
 import { quizRequest, renderQuizResults } from './prompts/turn'
+
+// How the model sees each part the server adds to a learner message. Typed over every added part, so a new one
+// can't be saved without a way to show it to the model.
+const RENDER: Record<AddedPart, (data: unknown) => string> = {
+  [PLAN_UPDATED]: data => renderPlanUpdate(data as PlanUpdate),
+  [SIDE_QUESTIONS]: data => renderSideQuestions(data as SideQuestionsData),
+  [QUIZ_RESULTS]: data => renderQuizResults(data as QuizResults),
+}
 
 /** A /quiz-me message reaches the model as the quiz request; the saved message keeps what the learner typed. */
 function frameCommand(m: UIMessage): UIMessage {
@@ -20,14 +30,6 @@ function frameCommand(m: UIMessage): UIMessage {
 /** Main and thread routes must convert history identically, or the shared prefix stops caching. */
 export function toModelMessages(messages: UIMessage[]) {
   return convertToModelMessages(messages.map(frameCommand), {
-    convertDataPart: (part) => {
-      if (part.type === SIDE_QUESTIONS)
-        return { type: 'text', text: renderSideQuestions(part.data as SideQuestionsData) }
-      if (part.type === PLAN_UPDATED)
-        return { type: 'text', text: renderPlanUpdate(part.data as PlanUpdate) }
-      if (part.type === QUIZ_RESULTS)
-        return { type: 'text', text: renderQuizResults(part.data as QuizResults) }
-      return undefined
-    },
+    convertDataPart: part => isAddedPart(part.type) ? { type: 'text', text: RENDER[part.type](part.data) } : undefined,
   })
 }

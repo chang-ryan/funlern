@@ -1,19 +1,21 @@
 import type { UIMessage, UIMessageStreamWriter } from 'ai'
-import type { DocVersions } from '@/lib/db/schema'
+import type { PlanSnapshot } from '@/lib/db/schema'
 import type { SessionMode, SessionStart } from '@/lib/plans/modes'
 import type { PlanUpdate } from '@/lib/plans/updates'
 import { createUIMessageStream, createUIMessageStreamResponse, generateId, generateText, stepCountIs, streamText, toUIMessageStream, validateUIMessages } from 'ai'
 import { after } from 'next/server'
+import { isAddedPart } from '@/lib/added-parts'
 import { markCacheBreakpoint } from '@/lib/ai/cache'
 import { parseCommand } from '@/lib/ai/commands'
 import { hideTools } from '@/lib/ai/hide-tools'
 import { toModelMessages } from '@/lib/ai/messages'
-import { currentModel } from '@/lib/ai/model'
+import { currentModel, NO_THINKING } from '@/lib/ai/model'
 import { finishMetadata, saveReplyWhenDone } from '@/lib/ai/reply'
 import { systemFor } from '@/lib/ai/system'
 import { titleConversation } from '@/lib/ai/title'
 import { toolChoiceFor, toolsFor } from '@/lib/ai/tools'
 import { placeTurn } from '@/lib/ai/turn'
+import { errorResponse, NOT_FOUND, UNAUTHORIZED } from '@/lib/auth'
 import { foldMaterialUpdates } from '@/lib/db/materials'
 import { foldPlanUpdates, setSeen } from '@/lib/db/plans'
 import { deleteMessagesFrom, getMessages, getOrStartConversation, getThreadsWithMessages, saveMessages, setFoldedThrough } from '@/lib/db/queries'
@@ -28,14 +30,14 @@ import { SIDE_QUESTIONS } from '@/lib/threads/side-questions'
 export async function POST(req: Request) {
   const userId = await getUserId()
   if (!userId)
-    return new Response('Unauthorized', { status: 401 })
+    return UNAUTHORIZED()
 
   const { id, message, start }: { id: string, message: UIMessage, start?: SessionStart } = await req.json()
   const convo = await getOrStartConversation(userId, id, start)
   if (!convo)
-    return new Response('Not found', { status: 404 })
+    return NOT_FOUND()
   if (message.role !== 'user')
-    return new Response('Only learner messages', { status: 400 })
+    return errorResponse(400, 'Only learner messages.')
 
   const stored = await getMessages(id)
   const turn = placeTurn(stored, message)
@@ -48,14 +50,14 @@ export async function POST(req: Request) {
     if (active && !stored.some(m => quizIdOf(m) === active))
       await exitActiveQuizzes(id)
     else if (active && quizResultsOf(incoming)?.quizId !== active)
-      return new Response('Finish or exit the quiz first.', { status: 409 })
+      return errorResponse(409, 'Finish or exit the quiz first.')
 
     // Ending a quiz: the results the tutor sees are rebuilt from the database, not taken from the client.
     const ending = quizResultsOf(incoming)
     if (ending) {
       const results = await endQuiz(userId, id, ending.quizId, ending.status)
       if (!results)
-        return new Response('That quiz is not active.', { status: 409 })
+        return errorResponse(409, 'That quiz is not active.')
       incoming = { ...incoming, parts: [{ type: QUIZ_RESULTS, data: results }] }
     }
   }
@@ -64,14 +66,15 @@ export async function POST(req: Request) {
   // A retry keeps the side questions already folded into its saved copy.
   const fold = turn.retry ? null : foldThreads(await getThreadsWithMessages(id))
   // Plan doc changes the tutor hasn't seen ride on this message too, ahead of the side questions.
-  const planFold = !turn.retry && convo.planId ? await foldPlan(convo.planId, convo.seen ?? {}, convo.seenMaterials ?? []) : null
+  const planFold = !turn.retry && convo.planId ? await foldPlan(convo.planId, convo.context?.seen ?? { docs: {}, materials: [] }) : null
   const added = [
     ...(planFold?.data ? [{ type: PLAN_UPDATED, data: planFold.data } as const] : []),
     ...(fold ? [{ type: SIDE_QUESTIONS, data: fold.data } as const] : []),
   ]
-  const outgoing: UIMessage = added.length
-    ? { ...incoming, parts: [...added, ...incoming.parts.filter(p => p.type !== SIDE_QUESTIONS && p.type !== PLAN_UPDATED)] }
-    : incoming
+  // Only the server adds these parts. A new message keeps none the browser sent, except quiz results, which were
+  // rebuilt from the database above; a retry is the server's own saved copy.
+  const own = turn.retry ? incoming.parts : incoming.parts.filter(p => !isAddedPart(p.type) || p.type === QUIZ_RESULTS)
+  const outgoing: UIMessage = { ...incoming, parts: [...added, ...own] }
 
   const messages = await validateUIMessages({ messages: [...turn.history, outgoing] })
 
@@ -82,7 +85,7 @@ export async function POST(req: Request) {
   if (fold)
     await setFoldedThrough(fold.foldedThrough)
   if (planFold)
-    await setSeen(id, planFold.seen, planFold.seenMaterials)
+    await setSeen(id, planFold.seen)
 
   // The first message names the conversation, alongside the reply. A command says nothing about the topic.
   const question = textOf(incoming).trim()
@@ -99,13 +102,13 @@ export async function POST(req: Request) {
 }
 
 /** Doc and material changes the tutor hasn't seen, as one update for the next learner message. */
-async function foldPlan(planId: string, seen: DocVersions, seenMaterials: string[]) {
-  const [docs, materials] = await Promise.all([foldPlanUpdates(planId, seen), foldMaterialUpdates(planId, seenMaterials)])
+async function foldPlan(planId: string, seen: PlanSnapshot) {
+  const [docs, materials] = await Promise.all([foldPlanUpdates(planId, seen.docs), foldMaterialUpdates(planId, seen.materials)])
   const changed = materials.added.length || materials.removed.length
   const data: PlanUpdate | null = docs.data || changed
     ? { docs: docs.data?.docs ?? [], ...(changed ? { materials: { added: materials.added, removed: materials.removed } } : {}) }
     : null
-  return { data, seen: docs.seen, seenMaterials: materials.seen }
+  return { data, seen: { docs: docs.seen, materials: materials.seen } }
 }
 
 interface Ctx { userId: string, conversationId: string, planId: string | null, mode: SessionMode, system: string, title?: Promise<string | null> }
@@ -145,8 +148,7 @@ async function quizReply(ctx: Ctx, messages: UIMessage[]) {
       tools: toolsFor({ ...ctx, quiz: true }),
       toolChoice: { type: 'tool', toolName: 'create_quiz' },
       messages: markCacheBreakpoint(modelMessages, modelMessages.length - 1),
-      // Forcing a tool call doesn't work with thinking on.
-      providerOptions: { anthropic: { thinking: { type: 'disabled' } } },
+      providerOptions: NO_THINKING,
     })
     const call = result.toolCalls.find(c => c.toolName === 'create_quiz')
     const saved = result.toolResults.find(r => r.toolName === 'create_quiz')
@@ -182,7 +184,7 @@ function respond(ctx: Ctx, messages: UIMessage[], replyId: string, body: (writer
       // The server adds to the learner's message (folded side questions and plan changes, quiz results
       // rebuilt from the database); send those parts back so the client's copy shows them too.
       for (const part of messages.at(-1)!.parts) {
-        if (part.type === SIDE_QUESTIONS || part.type === QUIZ_RESULTS || part.type === PLAN_UPDATED)
+        if (isAddedPart(part.type) && 'data' in part)
           writer.write({ type: part.type, data: part.data, transient: true })
       }
       await body(writer)
