@@ -45,6 +45,7 @@ describe('prompts', () => {
 
   it('plan draft', () => {
     expect(planDraftPrompt({ what: 'Rust <ownership>', why: '', level: 'some', seriousness: 'serious', deadline: '2026-12-01' })).toMatchSnapshot()
+    expect(planDraftPrompt({ what: 'Welsh', why: 'An exam', level: 'new', seriousness: 'steady' }, [{ name: 'exam "guide".pdf', text: '[page 1]\n\nPart A: <conversation>' }])).toMatchSnapshot()
   })
 
   it('title', () => {

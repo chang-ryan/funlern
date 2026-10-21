@@ -2,15 +2,23 @@
 
 import type { WizardInput } from '@/lib/plans/wizard'
 import { useRouter } from 'next/navigation'
-import { useState, useTransition } from 'react'
-import { createPlan } from '@/lib/plans/actions'
+import { useRef, useState, useTransition } from 'react'
+import { draftPlan, startPlan } from '@/lib/plans/actions'
+import { MATERIAL_LIMITS } from '@/lib/plans/material'
 import { LEVELS, SERIOUSNESS } from '@/lib/plans/wizard'
+
+/** Material picked in the form, uploaded once the plan exists. */
+type Pick = { kind: 'file', file: File } | { kind: 'paste', name: string, text: string }
+const pickName = (p: Pick) => p.kind === 'file' ? p.file.name : p.name || 'Pasted text'
 
 const LEVEL_LABEL: Record<WizardInput['level'], string> = { new: 'New to it', some: 'Know some', comfortable: 'Comfortable' }
 const SERIOUSNESS_LABEL: Record<WizardInput['seriousness'], string> = { casual: 'Casual', steady: 'Steady', serious: 'Serious' }
 const INPUT = 'w-full rounded-xl border border-border bg-surface px-3 py-2 text-base outline-none placeholder:text-muted focus:border-muted sm:text-[15px]'
 
-/** New-plan form. No name field: the tutor titles the plan when it drafts the brief and syllabus. */
+/**
+ * New-plan form. No name field: the tutor titles the plan when it drafts the brief and syllabus. Material is
+ * uploaded to the new plan before drafting, so the first syllabus can follow it.
+ */
 export function WizardForm() {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -20,19 +28,91 @@ export function WizardForm() {
   const [level, setLevel] = useState<WizardInput['level']>('new')
   const [seriousness, setSeriousness] = useState<WizardInput['seriousness']>('steady')
   const [deadline, setDeadline] = useState('')
+  const [picks, setPicks] = useState<Pick[]>([])
+  const [paste, setPaste] = useState<{ name: string, text: string } | null>(null)
+  const [progress, setProgress] = useState<string | null>(null)
+  // Files that couldn't be added; the plan is created anyway and can take them later.
+  const [skipped, setSkipped] = useState<{ planId: string, notes: string[] } | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const full = picks.length >= MATERIAL_LIMITS.files
+
+  function addFiles(files: FileList | null) {
+    const room = MATERIAL_LIMITS.files - picks.length
+    const added = [...files ?? []].slice(0, room).map(file => ({ kind: 'file' as const, file }))
+    setPicks([...picks, ...added])
+  }
+
+  function pickFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    addFiles(e.currentTarget.files)
+    // Let the same file be picked again after removing it.
+    e.currentTarget.value = ''
+  }
+
+  function addPaste() {
+    if (!paste)
+      return
+    setPicks([...picks, { kind: 'paste', ...paste }])
+    setPaste(null)
+  }
+
+  async function upload(planId: string, pick: Pick) {
+    const body = new FormData()
+    if (pick.kind === 'file') {
+      body.set('file', pick.file)
+    }
+    else {
+      body.set('name', pick.name)
+      body.set('text', pick.text)
+    }
+    const res = await fetch(`/api/plans/${planId}/materials`, { method: 'POST', body }).catch(() => null)
+    if (res?.ok)
+      return null
+    return `${pickName(pick)}: ${(await res?.json().catch(() => null))?.error ?? 'couldn\'t be added'}`
+  }
 
   function submit() {
     setError(null)
     const input: WizardInput = { what, why, level, seriousness, deadline: seriousness === 'serious' && deadline ? deadline : undefined }
     startTransition(async () => {
       try {
-        const { planId } = await createPlan(input)
-        router.push(`/p/${planId}/mc`)
+        setProgress('Creating your plan…')
+        const { planId } = await startPlan(input)
+        const notes: string[] = []
+        for (const pick of picks) {
+          setProgress(pick.kind === 'file' && pick.file.name.toLowerCase().endsWith('.pdf') ? `Reading ${pickName(pick)}…` : `Adding ${pickName(pick)}…`)
+          const note = await upload(planId, pick)
+          if (note)
+            notes.push(note)
+        }
+        setProgress('Drafting your brief and syllabus…')
+        await draftPlan(planId, input)
+        if (notes.length)
+          setSkipped({ planId, notes })
+        else
+          router.push(`/p/${planId}/mc`)
       }
       catch {
         setError('The tutor couldn\'t draft your plan. Try again.')
       }
+      finally {
+        setProgress(null)
+      }
     })
+  }
+
+  if (skipped) {
+    return (
+      <div className="flex flex-col gap-4">
+        <p className="text-sm">Your plan is ready, but some material couldn&apos;t be added:</p>
+        <ul className="list-disc pl-5 text-sm text-muted">
+          {skipped.notes.map(n => <li key={n}>{n}</li>)}
+        </ul>
+        <p className="text-sm text-muted">You can add it later from the plan&apos;s Material page.</p>
+        <button type="button" onClick={() => router.push(`/p/${skipped.planId}/mc`)} className="h-10 self-start rounded-xl bg-student px-4 text-sm font-medium text-student-foreground">
+          Open mission control
+        </button>
+      </div>
+    )
   }
 
   return (
@@ -59,23 +139,49 @@ export function WizardForm() {
         )}
       </fieldset>
 
-      <fieldset disabled className="flex flex-col gap-2 rounded-2xl border border-dashed border-border p-4">
+      <fieldset disabled={pending} className="flex flex-col gap-3 rounded-2xl border border-dashed border-border p-4 disabled:opacity-60">
         <legend className="px-1 text-sm font-medium">
           Material
-          {' '}
-          <span className="font-normal text-muted">· coming soon</span>
+          <span className="font-normal text-muted"> · optional</span>
         </legend>
         <p className="text-sm text-muted">
-          A course syllabus or curriculum, prep docs, past questions you were asked, your notes; for interviews, your resume and stories. PDF or Markdown, or paste text.
+          {`A course syllabus or curriculum, prep docs, past questions you were asked, your notes; for interviews, your resume and stories. PDF or Markdown up to ${MATERIAL_LIMITS.bytes / 1024 / 1024}MB, or paste text; at most ${MATERIAL_LIMITS.files} files. The tutor drafts your syllabus from it.`}
         </p>
+        {picks.length > 0 && (
+          <ul className="flex flex-col divide-y divide-border rounded-xl border border-border bg-surface">
+            {picks.map((pick, i) => (
+              // eslint-disable-next-line react/no-array-index-key -- picks have no id until uploaded
+              <li key={i} className="flex items-center gap-3 px-3 py-2 text-sm">
+                <span className="min-w-0 flex-1 truncate">{pickName(pick)}</span>
+                <span className="text-xs text-muted">{pick.kind === 'file' ? `${Math.max(1, Math.round(pick.file.size / 1024))} KB` : 'Pasted'}</span>
+                <button type="button" aria-label={`Remove ${pickName(pick)}`} onClick={() => setPicks(picks.filter((_, j) => j !== i))} className="rounded-lg px-1.5 text-muted hover:bg-tutor hover:text-foreground">×</button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {paste && (
+          <div className="flex flex-col gap-2">
+            <input aria-label="Name" placeholder="Name, e.g. Interview stories" value={paste.name} maxLength={120} onChange={e => setPaste({ ...paste, name: e.target.value })} className={INPUT} />
+            <textarea aria-label="Pasted text" placeholder="Paste Markdown or plain text" rows={6} value={paste.text} onChange={e => setPaste({ ...paste, text: e.target.value })} className={`${INPUT} font-mono text-[13px]`} />
+            <div className="flex gap-2">
+              <button type="button" disabled={!paste.text.trim()} onClick={addPaste} className="rounded-lg bg-student px-3 py-1.5 text-sm text-student-foreground disabled:opacity-40">Add</button>
+              <button type="button" onClick={() => setPaste(null)} className="rounded-lg px-3 py-1.5 text-sm text-muted hover:bg-tutor">Cancel</button>
+            </div>
+          </div>
+        )}
+        <input ref={fileRef} type="file" multiple accept=".pdf,.md,.markdown,.txt,application/pdf,text/markdown,text/plain" className="hidden" onChange={pickFiles} />
+        <div className="flex gap-2">
+          <button type="button" disabled={full} onClick={() => fileRef.current?.click()} className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-tutor disabled:opacity-40">Upload files</button>
+          <button type="button" disabled={full || !!paste} onClick={() => setPaste({ name: '', text: '' })} className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-tutor disabled:opacity-40">Paste text</button>
+        </div>
       </fieldset>
 
       <div className="flex items-center gap-3">
         <button type="submit" disabled={pending || !what.trim()} className="h-10 rounded-xl bg-student px-4 text-sm font-medium text-student-foreground disabled:opacity-40">
-          {pending ? 'Drafting…' : 'Create plan'}
+          {pending ? 'Creating…' : 'Create plan'}
         </button>
         <p role="status" className="text-sm text-muted">
-          {pending ? 'Drafting your brief and syllabus…' : error && <span className="text-incorrect">{error}</span>}
+          {pending ? progress : error && <span className="text-incorrect">{error}</span>}
         </p>
       </div>
     </form>

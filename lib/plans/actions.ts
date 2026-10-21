@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { currentModel } from '@/lib/ai/model'
 import { planDraftPrompt } from '@/lib/ai/prompts/tasks/plan-draft'
+import { getActiveMaterials } from '@/lib/db/materials'
 import * as plans from '@/lib/db/plans'
 import { getConversation } from '@/lib/db/queries'
 import { getUserId } from '@/lib/supabase/server'
@@ -34,21 +35,34 @@ const draft = z.object({
   syllabus: z.object({ Units: section, Notes: section }),
 })
 
-/** Creates a plan from the new-plan form: the tutor drafts its title, brief v1 and syllabus v1. */
-export async function createPlan(input: WizardInput): Promise<{ planId: string }> {
+/**
+ * Starts a plan from the new-plan form, with no docs yet: the form uploads its material to it next, then
+ * calls draftPlan, so the first brief and syllabus can draw on that material.
+ */
+export async function startPlan(input: WizardInput): Promise<{ planId: string }> {
+  const userId = await requireUser()
+  wizardInput.parse(input)
+  return { planId: await plans.createPlan(userId, null, []) }
+}
+
+/** The tutor drafts a new plan's title, brief v1 and syllabus v1 from the form and the plan's material. */
+export async function draftPlan(planId: string, input: WizardInput) {
   const userId = await requireUser()
   const answers = wizardInput.parse(input)
+  const plan = await plans.getPlan(userId, planId)
+  if (!plan)
+    throw new Error('Not found')
+  const material = await getActiveMaterials(plan.id)
   const { output } = await generateText({
     model: await currentModel(),
     output: Output.object({ schema: draft }),
-    prompt: planDraftPrompt(answers),
+    prompt: planDraftPrompt(answers, material),
     providerOptions: { anthropic: { thinking: { type: 'disabled' } } },
   })
-  const planId = await plans.createPlan(userId, output.title.trim().slice(0, 80) || null, [
-    { kind: 'brief', body: renderDoc('brief', output.brief) },
-    { kind: 'syllabus', body: renderDoc('syllabus', output.syllabus) },
-  ])
-  return { planId }
+  await plans.writeDocVersion({ planId: plan.id, kind: 'brief', body: renderDoc('brief', output.brief), author: 'tutor', summary: 'First draft' })
+  await plans.writeDocVersion({ planId: plan.id, kind: 'syllabus', body: renderDoc('syllabus', output.syllabus), author: 'tutor', summary: 'First draft' })
+  if (!plan.title)
+    await plans.renamePlan(userId, plan.id, output.title.trim().slice(0, 80) || null)
 }
 
 /** Renames a plan; an empty title clears it. */

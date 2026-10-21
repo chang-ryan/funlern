@@ -229,7 +229,7 @@ What to borrow (MIT code can be copied with its license notice):
   - [x] 3.1 `plan_materials` (write-once, soft delete); private Storage for originals; upload and paste; Material page with the "what goes here" copy; caps of 5 files, 10MB per file and ~30k tokens (no page limit; transcription up to 100 pages)
   - [x] 3.2 Extraction once at upload: pdf.js text layer, one-time Claude transcription when any page has no text; preview and token count
   - [x] 3.3 Material in the system prompt, pinned per session; additions and removals fold into the next learner message
-  - [ ] 3.4 Material in the wizard draft
+  - [x] 3.4 Material in the wizard: files and pasted text are uploaded to the new plan before drafting, so the first syllabus follows the material and cites it; files that can't be added are listed, and the plan is created anyway
 - Plans, step 4: training
   - [x] 4.1 `conversations.mode` and `training_style`, fixed at creation; Learn/Train and rep style under the plan composer; mode block in the system prompt
   - [ ] Trainer principles in training sessions and mission control; setup offers a tutor-designed or co-designed Method (iterate on real setup sessions)
