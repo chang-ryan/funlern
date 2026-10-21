@@ -2,11 +2,20 @@
 
 import type { Anchor } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
+import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { getConversation, getLatestMessageIndex, getMessage } from '@/lib/db/queries'
 import { answerQuestion, getLearnerQuiz } from '@/lib/db/quizzes'
 import { conversations, threads } from '@/lib/db/schema'
+import { createClient } from '@/lib/supabase/server'
+
+/** Signs out of this browser and goes to the sign-in page. */
+export async function signOut() {
+  const supabase = await createClient()
+  await supabase.auth.signOut({ scope: 'local' })
+  redirect('/login')
+}
 
 /** Renames a conversation; an empty title clears it. */
 export async function renameConversation(id: string, title: string | null) {

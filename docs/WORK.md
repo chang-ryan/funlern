@@ -247,7 +247,7 @@ What to borrow (MIT code can be copied with its license notice):
   - [ ] 4.4 `log_rep`: append the Log row, replace Next, reveal the key
 - [ ] `ask_user` tool and card
 - [ ] Context compaction (rolling summary)
-- [x] Conversation header: click the title to edit it, sidebar icon (drawer not built)
+- [x] Conversation header: click the title to edit it; the menu icon opens a left drawer with Profile (not built yet) and Log out
 - [x] Generated conversation titles: Haiku names the conversation from its first message, alongside the reply; a rename wins
 - [x] Slash-command menu in the main composer: `/` lists Quiz Me and Create Study Guide, filters on label or command, picking fills `/name ` (server doesn't run them yet)
 - [x] `/quiz-me`: the model must call `create_quiz` (server tool, thinking off for that call); its execute saves `quizzes` + `quiz_questions` (choices shuffled) scoped to the request's user and conversation. The saved/streamed card keeps questions and choices only. The card grades each pick through a server action (`quiz_answers`), resumes after reload, and ends with Finish or Exit; ending sends a learner message whose results the server rebuilds from the database, and the tutor reviews (misses and skips explained, takeaways if all right). The main chat is blocked (client and server) while a quiz is active; threads are not
