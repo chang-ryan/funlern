@@ -27,3 +27,42 @@ jobs:
       - run: pnpm exec next typegen
       - run: pnpm exec tsc --noEmit
       - run: pnpm test
+
+  # End to end against a local Supabase with the scripted model: no Claude, Tavily or secrets needed.
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: pnpm install --frozen-lockfile
+      # Only what the app and smoke test use: Postgres, Auth, Storage, the API gateway and Mailpit for sign-in codes.
+      - run: supabase start -x realtime,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+      # The materials bucket from config.toml; start usually creates it, and this is a no-op if so.
+      - run: supabase seed buckets --local
+      - name: Write .env.local from the local stack
+        run: |
+          eval "$(supabase status -o env)"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
+            echo "SUPABASE_SECRET_KEY=$SECRET_KEY"
+            echo "DATABASE_URL=$DB_URL"
+            echo "MAILPIT_URL=$MAILPIT_URL"
+          } > .env.local
+      - name: Start the app on the scripted model
+        run: |
+          pnpm dev:mock > dev.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3100/login && exit 0; sleep 2; done
+          cat dev.log
+          exit 1
+      - run: pnpm test:smoke
+      - if: failure()
+        run: tail -100 dev.log

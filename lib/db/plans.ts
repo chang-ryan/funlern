@@ -157,7 +157,7 @@ export async function setConversationPlan(userId: string, conversationId: string
 }
 
 /** What a plan holds now: its docs' latest versions and its material's ids. */
-export async function planSnapshot(planId: string): Promise<PlanSnapshot> {
+async function planSnapshot(planId: string): Promise<PlanSnapshot> {
   const [docs, materials] = await Promise.all([latestVersions(planId), getActiveMaterials(planId)])
   return { docs, materials: materials.map(m => m.id) }
 }

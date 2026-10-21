@@ -1,7 +1,7 @@
 import type { UIMessageChunk } from 'ai'
 
 /** Calls the learner never sees and history never keeps: a create_quiz outside /quiz-me carries its answers. */
-export const HIDDEN_TOOLS = new Set(['create_quiz'])
+const HIDDEN_TOOLS = new Set(['create_quiz'])
 
 /** Drops every chunk of a hidden tool's calls, so neither the learner nor the saved reply gets them. */
 export function hideTools(stream: ReadableStream<UIMessageChunk>) {

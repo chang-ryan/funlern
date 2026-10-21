@@ -1,7 +1,7 @@
 import type { UIMessage } from 'ai'
 import type { MessageMetadata } from './schema'
 import type { SessionStart } from '@/lib/plans/modes'
-import { and, asc, desc, eq, gte, inArray, isNull, lte, max, sql } from 'drizzle-orm'
+import { and, asc, eq, gte, inArray, isNull, lte, max, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { resolveStart } from '@/lib/plans/modes'
 import { db } from '.'
@@ -52,10 +52,6 @@ export async function getOrStartConversation(userId: string, id: string, start: 
 export async function setGeneratedTitle(conversationId: string, title: string) {
   const rows = await db.update(conversations).set({ title }).where(and(eq(conversations.id, conversationId), isNull(conversations.title))).returning({ id: conversations.id })
   return rows.length > 0
-}
-
-export async function getConversations(userId: string) {
-  return db.select().from(conversations).where(eq(conversations.userId, userId)).orderBy(desc(conversations.createdAt))
 }
 
 export async function getMessages(conversationId: string, upToIndex?: number) {

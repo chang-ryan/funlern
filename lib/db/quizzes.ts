@@ -6,7 +6,7 @@ import { db } from '.'
 import { quizAnswers, quizQuestions, quizzes } from './schema'
 import 'server-only'
 
-export type QuizInput = InferToolInput<typeof createQuiz>
+type QuizInput = InferToolInput<typeof createQuiz>
 
 /** The choices in random order, with the answer index following its choice. Models put the right answer first. */
 export function shuffleChoices<Q extends { choices: string[], answer: number }>(q: Q, random = Math.random): Q {

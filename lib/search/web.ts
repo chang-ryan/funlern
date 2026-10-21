@@ -4,7 +4,7 @@ import 'server-only'
 // with short snippets, since they're billed as input on this turn and every later one.
 export const SEARCH_LIMITS = { perTurn: 2, perDay: 30, results: 3, snippetChars: 600 }
 
-export interface SearchResult { title: string, url: string, snippet: string }
+interface SearchResult { title: string, url: string, snippet: string }
 
 // The smoke test runs on the scripted model (MOCK_MODEL=1); it gets fixed results instead of a network call.
 const MOCKED = process.env.MOCK_MODEL === '1' && process.env.NODE_ENV !== 'production'

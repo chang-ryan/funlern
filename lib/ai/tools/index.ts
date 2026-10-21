@@ -1,4 +1,3 @@
-import type { InferUITools, UIMessage } from 'ai'
 import type { SessionMode } from '@/lib/plans/modes'
 import { updatePlanDoc } from '@/lib/db/plans'
 import { saveQuiz } from '@/lib/db/quizzes'
@@ -8,7 +7,7 @@ import { SEARCH_LIMITS, searchWeb } from '@/lib/search/web'
 import { createQuiz, updateDoc, webSearch } from './schemas'
 import 'server-only'
 
-export interface ToolContext {
+interface ToolContext {
   userId: string
   conversationId: string
   planId?: string | null
@@ -69,6 +68,3 @@ export function toolsFor(ctx: ToolContext) {
 export function toolChoiceFor(conversation: { planId: string | null }) {
   return conversation.planId ? 'auto' as const : 'none' as const
 }
-
-export type FunlernTools = InferUITools<ReturnType<typeof toolsFor>>
-export type FunlernUIMessage = UIMessage<unknown, never, FunlernTools>

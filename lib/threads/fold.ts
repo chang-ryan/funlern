@@ -3,7 +3,7 @@ import type { SideQuestion, SideQuestionsData } from './side-questions'
 import type { Anchor } from '@/lib/db/schema'
 import { textOf } from '@/lib/messages'
 
-export interface Fold { data: SideQuestionsData, foldedThrough: { threadId: string, count: number }[] }
+interface Fold { data: SideQuestionsData, foldedThrough: { threadId: string, count: number }[] }
 
 interface FoldableThread { id: string, anchor: Anchor, foldedThrough: number, messages: UIMessage[] }
 
