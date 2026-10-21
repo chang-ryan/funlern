@@ -3,9 +3,9 @@ import type { MessageMetadata } from './schema'
 import type { SessionStart } from '@/lib/plans/modes'
 import { and, asc, desc, eq, gte, inArray, isNull, lte, max, sql } from 'drizzle-orm'
 import { z } from 'zod'
+import { resolveStart } from '@/lib/plans/modes'
 import { db } from '.'
-import { getActiveMaterials } from './materials'
-import { getPlan, latestVersions } from './plans'
+import { getPlan, startingContext } from './plans'
 import { conversations, messages, threadMessages, threads } from './schema'
 import 'server-only'
 
@@ -42,14 +42,9 @@ export async function getOrStartConversation(userId: string, id: string, start: 
   const { planId } = start
   if (planId && !await getPlan(userId, planId))
     return null
-  const versions = planId ? await latestVersions(planId) : null
-  const materials = planId ? (await getActiveMaterials(planId)).map(m => m.id) : null
-  // Training needs training.md, which mission control sets up; until then a training start is a learning session.
-  const mode = !planId ? 'learning' : start.mode === 'mission' ? 'mission' : start.mode === 'training' && versions?.training ? 'training' : 'learning'
-  const trainingStyle = mode === 'training' ? (start.style ?? 'guided') : null
-  // A plan's mission control has a fixed title; a second one for the same plan hits the unique index and comes back null.
-  const title = mode === 'mission' ? 'Mission control' : null
-  await db.insert(conversations).values({ id, userId, planId, mode, trainingStyle, title, pinned: versions, seen: versions, pinnedMaterials: materials, seenMaterials: materials }).onConflictDoNothing()
+  const context = planId ? await startingContext(planId) : null
+  const { mode, trainingStyle, title } = resolveStart(start, context && { hasTraining: !!context.pinned.docs.training })
+  await db.insert(conversations).values({ id, userId, planId, mode, trainingStyle, title, context }).onConflictDoNothing()
   return getConversation(userId, id)
 }
 

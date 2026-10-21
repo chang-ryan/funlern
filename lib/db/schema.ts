@@ -50,11 +50,8 @@ export const conversations = pgTable(
     // Fixed when the session starts. A training session in a plan without training.md sets it up instead.
     mode: sessionModeEnum().default('learning').notNull(),
     trainingStyle: trainingStyleEnum(),
-    pinned: jsonb().$type<DocVersions>(),
-    seen: jsonb().$type<DocVersions>(),
-    // Material ids, like the doc versions: what the system prompt was built with, and what was folded in since.
-    pinnedMaterials: jsonb().$type<string[]>(),
-    seenMaterials: jsonb().$type<string[]>(),
+    // What the session's tutor has of its plan: null outside a plan.
+    context: jsonb().$type<SessionContext>(),
     ...timestamps,
   },
   t => [
@@ -66,8 +63,17 @@ export const conversations = pgTable(
 
 export const docKindEnum = pgEnum('doc_kind', DOC_KINDS)
 
-/** Doc versions a session's tutor has: `pinned` built its system prompt, `seen` adds what was folded in since. */
+/** Doc versions by kind. */
 export type DocVersions = Partial<Record<DocKind, number>>
+
+/** A plan's docs and material at a point: doc versions, and the ids of material files. */
+export interface PlanSnapshot { docs: DocVersions, materials: string[] }
+
+/**
+ * What a session's tutor has of its plan: `pinned` built its system prompt when it started and never changes;
+ * `seen` adds what has been folded into its messages since.
+ */
+export interface SessionContext { pinned: PlanSnapshot, seen: PlanSnapshot }
 
 export const planDocs = pgTable(
   'plan_docs',
