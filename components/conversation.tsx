@@ -18,10 +18,10 @@ import { useMediaQuery } from '@/lib/hooks/use-media-query'
 import { usePressOutside } from '@/lib/hooks/use-press-outside'
 import { TITLE_PART } from '@/lib/messages'
 import { activeQuizId, QUIZ_RESULTS, quizIdOf, quizResultsOf } from '@/lib/quiz'
+import { offerSessionTitle, setSessionHead } from '@/lib/session-heads'
 import { AssistantMessage } from './assistant-message'
 import { ChatView } from './chat/chat-view'
 import { SessionModeChip } from './chat/session-mode'
-import { ConversationHeader } from './conversation-header'
 import { NewThreadCard, ThreadCard } from './thread'
 import { ThreadDrawer } from './thread-drawer'
 import { ThreadRail } from './thread-rail'
@@ -46,7 +46,7 @@ const chatTransport = transportFor('/api/chat')
 const threadTransport = transportFor('/api/thread')
 
 /** Persisted conversation with side threads anchored on highlighted passages. */
-export function Conversation({ id, isNew = false, start, mode = start?.mode ?? 'learning', trainingStyle = null, firstMessage, intro, suggestions, stayOnPage = false, title, plan, model, initialMessages, initialThreads }: {
+export function Conversation({ id, isNew = false, start, mode = start?.mode ?? 'learning', trainingStyle = null, firstMessage, intro, suggestions, stayOnPage = false, model, initialMessages, initialThreads }: {
   id: string
   /** Not saved yet: the server creates it with the first message. */
   isNew?: boolean
@@ -63,15 +63,11 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
   suggestions?: string[]
   /** The page's own URL, not /c/{id}, is the session's address (mission control at /p/[id]/mc). */
   stayOnPage?: boolean
-  title: string | null
-  /** The plan the session is in, for the breadcrumb. */
-  plan?: { id: string, title: string | null }
   model: string
   initialMessages: UIMessage[]
   initialThreads: ThreadData[]
 }) {
   const [threads, setThreads] = useState(initialThreads)
-  const [currentTitle, setCurrentTitle] = useState(title)
   const [focusedId, setFocusedId] = useState<string | null>(null)
   // Threads from earlier visits start collapsed; new ones open expanded.
   const [collapsed, setCollapsed] = useState(() => new Set(initialThreads.map(t => t.id)))
@@ -113,7 +109,7 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
     // On the first turn it also sends the title it generated.
     onData: (part) => {
       if (part.type === TITLE_PART) {
-        setCurrentTitle(current => current ?? part.data as string)
+        offerSessionTitle(id, part.data as string)
         return
       }
       if (!isAddedPart(part.type))
@@ -150,6 +146,11 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
 
   // A reply arriving means the server has saved the conversation.
   const saved = !isNew || messages.some(m => m.role === 'assistant')
+  // The top bar's crumb offers a rename once there's something saved to rename.
+  useEffect(() => {
+    if (isNew && saved)
+      setSessionHead(id, { saved: true })
+  }, [isNew, saved, id])
 
   // Show the Ask button for a settled selection inside one finished tutor message.
   useEffect(() => {
@@ -327,7 +328,6 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
       top={intro}
       suggestions={suggestions && { items: suggestions, onPick: send }}
       transcriptRef={transcriptRef}
-      header={<ConversationHeader id={id} title={currentTitle} setTitle={setCurrentTitle} saved={saved} plan={plan} />}
       onTranscriptClick={onTranscriptClick}
       onTranscriptPointerMove={onTranscriptPointerMove}
       renderTutor={(m, _i, streaming) => (

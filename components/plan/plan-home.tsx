@@ -38,7 +38,7 @@ export function PlanHome({ plan, sessions, files, hasTraining, initialMode = 'le
   }
 
   return (
-    <PlanShell back={{ href: '/', label: 'All plans' }} files={files}>
+    <PlanShell files={files}>
       <PlanTitle planId={plan.id} initial={plan.title} />
       <div className="flex flex-col gap-2">
         <Composer

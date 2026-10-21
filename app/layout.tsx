@@ -23,13 +23,17 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 }
 
-export default function RootLayout({ children }: LayoutProps<'/'>) {
+// crumbs: the top bar, rendered per page by the @crumbs slot so it's the same everywhere and ready on first paint.
+export default function RootLayout({ children, crumbs }: LayoutProps<'/'>) {
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex h-dvh flex-col font-sans">{children}</body>
+      <body className="flex h-dvh flex-col font-sans">
+        {crumbs}
+        {children}
+      </body>
     </html>
   )
 }

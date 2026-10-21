@@ -255,6 +255,7 @@ What to borrow (MIT code can be copied with its license notice):
 - [ ] Quiz: other answer types (free text graded by the model); a check on the model's answer key (or a "this answer is wrong" button); rate limit /quiz-me
 - [ ] Push the `quizzes`, `plans`, `session_modes` and `plan_materials` migrations to hosted (`pnpm db:push`); create the hosted `materials` bucket (`supabase seed buckets --linked`); set `SUPABASE_SECRET_KEY` there
 - [x] New chats are saved on the first message: they open at their real `/c/{id}` straight away (`/new` redirects to a fresh id; the plan hub navigates there with its first message in memory), so every link, Back and Forward is a real navigation; backing out of an empty chat leaves no row
+- [x] One top bar on every page, from the root layout's `@crumbs` slot (server-rendered with the page, so no flash): funlern / plan / page. A chat's title in it follows the generated title and renames in place; the old per-page "← All plans" back links are gone
 - [x] Tutor copy button shows on hover (always on touch); scroll-to-bottom arrow fades in and out (200ms)
 - [x] Model picker under the chat bar: Haiku 5.5 / Sonnet 5.5, saved in a cookie that the main and thread routes read
 - [x] Reply hardening: learner message saved before the model call; reply saved from the server's own stream copy (survives dropped connections); finish reason in `metadata`; cut-off/error notice with Retry; retries replace instead of duplicating

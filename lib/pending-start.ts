@@ -7,7 +7,7 @@ import type { SessionStart } from '@/lib/plans/modes'
 export interface PendingStart {
   text: string
   start: SessionStart
-  /** For the breadcrumb, before the session is saved. */
+  /** For the top bar's crumbs, before the session is saved. */
   plan?: { id: string, title: string | null }
 }
 

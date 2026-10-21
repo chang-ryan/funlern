@@ -10,8 +10,6 @@ import { Conversation } from './conversation'
 interface Saved {
   mode: SessionMode
   trainingStyle: TrainingStyle | null
-  title: string | null
-  plan?: { id: string, title: string | null }
   messages: UIMessage[]
   threads: ThreadData[]
 }
@@ -26,7 +24,7 @@ export function Session({ id, model, saved }: { id: string, model: string, saved
   useEffect(() => clearPendingStart(id), [id])
 
   if (saved) {
-    return <Conversation id={id} mode={saved.mode} trainingStyle={saved.trainingStyle} title={saved.title} plan={saved.plan} model={model} initialMessages={saved.messages} initialThreads={saved.threads} />
+    return <Conversation id={id} mode={saved.mode} trainingStyle={saved.trainingStyle} model={model} initialMessages={saved.messages} initialThreads={saved.threads} />
   }
   return (
     <Conversation
@@ -35,8 +33,6 @@ export function Session({ id, model, saved }: { id: string, model: string, saved
       start={pending?.start}
       trainingStyle={pending?.start.style ?? null}
       firstMessage={pending?.text}
-      title={null}
-      plan={pending?.plan}
       model={model}
       initialMessages={[]}
       initialThreads={[]}

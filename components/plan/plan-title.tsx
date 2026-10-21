@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { renamePlan } from '@/lib/plans/actions'
 import { UNTITLED_PLAN } from './format'
@@ -8,6 +9,7 @@ import { UNTITLED_PLAN } from './format'
 export function PlanTitle({ planId, initial }: { planId: string, initial: string | null }) {
   const [title, setTitle] = useState(initial)
   const [editing, setEditing] = useState(false)
+  const router = useRouter()
 
   async function save(next: string) {
     setEditing(false)
@@ -18,6 +20,8 @@ export function PlanTitle({ planId, initial }: { planId: string, initial: string
     setTitle(value)
     try {
       await renamePlan(planId, value)
+      // The top bar's crumb shows the plan's name too.
+      router.refresh()
     }
     catch {
       setTitle(previous)

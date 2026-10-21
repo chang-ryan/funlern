@@ -12,7 +12,7 @@ import { ModelPicker } from './model-picker'
 import { ReplyProblem } from './reply-problem'
 
 /** Presentational chat: scrolling transcript + composer. State lives in the caller's useChat. */
-export function ChatView({ messages, status, error, onSend, onStop, onRetry, model, session, top, suggestions, blocked, header, renderTutor, rail, overlay, transcriptRef, onTranscriptClick, onTranscriptPointerMove }: {
+export function ChatView({ messages, status, error, onSend, onStop, onRetry, model, session, top, suggestions, blocked, renderTutor, rail, overlay, transcriptRef, onTranscriptClick, onTranscriptPointerMove }: {
   messages: UIMessage[]
   status: ChatStatus
   error?: Error
@@ -30,7 +30,6 @@ export function ChatView({ messages, status, error, onSend, onStop, onRetry, mod
   suggestions?: { items: string[], onPick: (text: string) => void }
   /** Why the learner can't send right now, e.g. a quiz waiting to be finished. */
   blocked?: string
-  header?: ReactNode
   renderTutor?: (message: UIMessage, index: number, streaming: boolean) => ReactNode
   /** Desktop column beside the transcript; scrolls with it. */
   rail?: ReactNode
@@ -107,7 +106,6 @@ export function ChatView({ messages, status, error, onSend, onStop, onRetry, mod
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {header}
       {top && (
         <div className="shrink-0 border-b border-border">
           <div className={`mx-auto px-4 pt-2 pb-4 ${width}`}>{top}</div>

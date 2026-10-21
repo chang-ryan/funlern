@@ -4,7 +4,6 @@ import { currentModelId } from '@/lib/ai/model'
 import { getMissionSession } from '@/lib/db/plans'
 import { getMessages, getThreadMessages, getThreads } from '@/lib/db/queries'
 import { missionSuggestions } from '@/lib/plans/mission'
-import { MISSION_TITLE } from '@/lib/plans/modes'
 import { loadPlan } from '../load'
 
 // Sent when a page links here to do something, e.g. Set up training.
@@ -22,8 +21,6 @@ export default async function MissionControlPage({ params, searchParams }: PageP
   const firstMessage = typeof action === 'string' ? ACTIONS[action] : undefined
   const common = {
     mode: 'mission' as const,
-    title: MISSION_TITLE,
-    plan: { id: plan.id, title: plan.title },
     model,
     firstMessage,
     stayOnPage: true,
