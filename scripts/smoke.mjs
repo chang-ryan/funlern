@@ -88,7 +88,9 @@ await asLearner(APP, 'smoke', async ({ userId, cookie, send, post, addMaterial }
   // A session in a plan pins the plan's docs into its system prompt.
   const plan = await makePlan(userId, { brief: '## Goal\n\nPronounce Welsh place names.', syllabus: '## Units\n\n- [ ] Vowels\n- [ ] Mutations\n\n## Notes\n' })
   const ps = { id: crypto.randomUUID() }
-  assert.ok(echoed(await post('/api/chat', { id: ps.id, start: { planId: plan.id }, message: say('[mock:echo]') })).includes('Pronounce Welsh place names'), 'the brief is in the system prompt')
+  const planEcho = echoed(await post('/api/chat', { id: ps.id, start: { planId: plan.id }, message: say('[mock:echo]') }))
+  assert.ok(planEcho.includes('Pronounce Welsh place names'), 'the brief is in the system prompt')
+  assert.ok(planEcho.includes(`<sent>${new Date().toISOString().slice(0, 10)}</sent>`), 'the learner message carries the day it was sent')
   const [{ context }] = await sql`select context from conversations where id = ${ps.id}`
   assert.deepEqual(context.pinned, { docs: { brief: 1, syllabus: 1 }, materials: [] })
   assert.equal((await send('/api/chat', { id: crypto.randomUUID(), start: { planId: crypto.randomUUID() }, message: say('hi') })).status, 404, 'a plan that is not yours is refused')
@@ -179,4 +181,20 @@ await asLearner(APP, 'smoke', async ({ userId, cookie, send, post, addMaterial }
   assert.match(scan.text, /Mock transcription/, 'a page with no text layer sends the PDF to be transcribed')
   assert.equal((await upload('long.pdf', 'application/pdf', pdfWithPages(Array.from({ length: 12 }, (_, i) => `Page ${i + 1} of a long handout with enough text on it.`)))).pages, 12, 'no page limit')
   step('upload', 'text layer and Markdown stored once with originals in Storage; image-only page transcribed; 12 pages fine')
+
+  // Web search: plan sessions only, logged, capped per turn; results stay in the history for later turns.
+  const searches = async () => count(sql`select count(*)::int from web_searches where user_id = ${userId}`)
+  const ws2 = { id: crypto.randomUUID() }
+  const found = await post('/api/chat', { id: ws2.id, start: { planId: plan.id }, message: say(tool('web_search', { query: 'welsh mutations' })) })
+  assert.ok(found.includes('"toolName":"web_search"') && found.includes('Mock snippet about welsh mutations') && textOf(found) === 'done', 'search ran and the reply went on')
+  assert.equal(await searches(), 1, 'the search is logged')
+  await until(async () => await count(sql`select count(*)::int from messages where conversation_id = ${ws2.id}`) === 2)
+  assert.ok(echoed(await post('/api/chat', { id: ws2.id, message: say('[mock:echo]') })).includes('Mock snippet about welsh mutations'), 'results stay in the history')
+  await until(async () => await count(sql`select count(*)::int from messages where conversation_id = ${ws2.id}`) === 4)
+  const capped = await post('/api/chat', { id: ws2.id, message: say(['first query', 'second query', 'third query'].map(q => tool('web_search', { query: q })).join(' ')) })
+  assert.equal(capped.split('"type":"tool-output-error"').length - 1, 1, 'a third search in one turn is refused')
+  assert.equal(await searches(), 3)
+  await post('/api/chat', { id: crypto.randomUUID(), message: say(tool('web_search', { query: 'outside a plan' })) })
+  assert.equal(await searches(), 3, 'chats outside a plan do not search')
+  step('web search', 'plan sessions search; logged; results kept in history; 2 a turn; none outside a plan')
 })

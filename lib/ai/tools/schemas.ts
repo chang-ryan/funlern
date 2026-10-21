@@ -45,6 +45,17 @@ export const createQuiz = tool({
   }),
 })
 
+/** Server tool: searches the web (the execute is bound per request in ./index.ts). Only plan sessions can call it. */
+export const webSearch = tool({
+  description: 'Search the web. Use it for facts that may be newer than your training or that you are unsure of, and when the learner asks you to look something up; not for what you already know well. Cite what you use by title and link.',
+  inputSchema: z.object({
+    query: z.string().min(2).max(200).describe('A short search query, as you would type it into a search engine'),
+  }),
+  outputSchema: z.object({
+    results: z.array(z.object({ title: z.string(), url: z.string(), snippet: z.string() })),
+  }),
+})
+
 // Every section name across the doc templates, so the tool's schema follows docs.ts.
 const ALL_SECTIONS = [...new Set(DOC_KINDS.flatMap(k => DOC_SECTIONS[k]))] as [string, ...string[]]
 

@@ -1,5 +1,6 @@
 import type { UIMessage } from 'ai'
 import type { AddedPart } from '@/lib/added-parts'
+import type { MessageMetadata } from '@/lib/db/schema'
 import type { PlanUpdate } from '@/lib/plans/updates'
 import type { QuizResults } from '@/lib/quiz'
 import type { SideQuestionsData } from '@/lib/threads/side-questions'
@@ -27,9 +28,15 @@ function frameCommand(m: UIMessage): UIMessage {
   return { ...m, parts: [...m.parts.filter(p => p.type !== 'text'), { type: 'text', text: quizRequest(command.args) }] }
 }
 
+/** A learner message reaches the model with the day it was sent first, from its saved metadata. */
+function frameDate(m: UIMessage): UIMessage {
+  const sentOn = m.role === 'user' ? (m.metadata as MessageMetadata | undefined)?.sentOn : undefined
+  return sentOn ? { ...m, parts: [{ type: 'text', text: `<sent>${sentOn}</sent>` }, ...m.parts] } : m
+}
+
 /** Main and thread routes must convert history identically, or the shared prefix stops caching. */
 export function toModelMessages(messages: UIMessage[]) {
-  return convertToModelMessages(messages.map(frameCommand), {
+  return convertToModelMessages(messages.map(m => frameDate(frameCommand(m))), {
     convertDataPart: part => isAddedPart(part.type) ? { type: 'text', text: RENDER[part.type](part.data) } : undefined,
   })
 }

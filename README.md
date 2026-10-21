@@ -24,6 +24,7 @@ pnpm dev
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `supabase status`, "Publishable" (`sb_publishable_…`) |
 | `SUPABASE_SECRET_KEY` | `supabase status`, "Secret" (`sb_secret_…`), not the S3 secret key. Server only: it bypasses RLS, so it must never get a `NEXT_PUBLIC_` prefix |
 | `ANTHROPIC_API_KEY` | console.anthropic.com |
+| `TAVILY_API_KEY` | tavily.com (free tier: 1,000 searches a month). Optional: without it the tutor is told search isn't set up |
 
 | Local service | URL |
 | --- | --- |

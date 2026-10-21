@@ -70,6 +70,21 @@ await asLearner(APP, 'evals', async ({ userId, post, addMaterial }) => {
     return 'transcription kept the page text'
   })
 
+  await check('knows today\'s date', async () => {
+    const today = new Date().toISOString().slice(0, 10)
+    const answer = textOf(await post('/api/chat', { id: crypto.randomUUID(), message: say('What is today\'s date? Reply with YYYY-MM-DD only.') }))
+    assert.equal(answer.trim(), today)
+    return today
+  })
+
+  await check('searches when asked about something recent', async () => {
+    const answer = textOf(await post('/api/chat', { id: crypto.randomUUID(), start: { planId: plan.id }, message: say('Search the web: what is the latest stable release of Node.js? Answer in one line with the version and the source link.') }))
+    const [{ n }] = await sql`select count(*)::int as n from web_searches where user_id = ${userId}`
+    assert.ok(n >= 1, 'no search was run (is TAVILY_API_KEY set?)')
+    assert.match(answer, /https?:\/\//, 'the answer cites a link')
+    return `${n} search(es); "${answer.trim().slice(0, 80)}"`
+  })
+
   await check('writes a quiz on the topic', async () => {
     const qz = { id: crypto.randomUUID() }
     await post('/api/chat', { id: qz.id, message: say('In two sentences, what is a JavaScript closure?') })

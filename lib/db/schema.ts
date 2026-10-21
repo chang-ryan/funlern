@@ -106,6 +106,20 @@ export const planDocVersions = pgTable(
   t => [unique('plan_doc_versions_doc_version_key').on(t.docId, t.version)],
 ).enableRLS()
 
+// Every web search the tutor runs: the daily cap counts these, and they're the record of what search costs.
+export const webSearches = pgTable(
+  'web_searches',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: userId(),
+    conversationId: uuid().references((): AnyPgColumn => conversations.id, { onDelete: 'set null' }),
+    query: text().notNull(),
+    results: integer().notNull(),
+    ...timestamps,
+  },
+  t => [index('web_searches_user_created_idx').on(t.userId, t.createdAt)],
+).enableRLS()
+
 export const materialKindEnum = pgEnum('material_kind', MATERIAL_KINDS)
 
 // The learner's own material for a plan. Write-once: to change a file, delete it and add another. Deleting
@@ -148,7 +162,11 @@ export const messages = pgTable(
 export interface Anchor { quote: string, prefix: string, suffix: string }
 
 /** Stored on tutor messages. `finishReason` other than 'stop' means the reply was cut off (length, error, dropped stream). */
-export interface MessageMetadata { finishReason?: string }
+export interface MessageMetadata {
+  finishReason?: string
+  /** On learner messages: the day it was sent (YYYY-MM-DD, UTC), saved once so the tutor's history renders the same every turn. */
+  sentOn?: string
+}
 
 export const threads = pgTable(
   'threads',

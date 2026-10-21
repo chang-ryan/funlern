@@ -11,7 +11,7 @@ import { toolChoiceFor, toolsFor } from '@/lib/ai/tools'
 import { placeTurn } from '@/lib/ai/turn'
 import { NOT_FOUND, UNAUTHORIZED } from '@/lib/auth'
 import { deleteThreadMessagesFrom, getConversation, getMessages, getThread, getThreadMessages, saveThreadMessages } from '@/lib/db/queries'
-import { textOf } from '@/lib/messages'
+import { stampSent, textOf } from '@/lib/messages'
 import { getUserId } from '@/lib/supabase/server'
 
 export async function POST(req: Request) {
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   // Frozen fork: main as it stood when the thread opened, then this thread's own turns.
   const prefix = await toModelMessages(await getMessages(t.conversationId, t.snapshotIndex))
   const turn = placeTurn(await getThreadMessages(id), message)
-  const threadMessages = await validateUIMessages({ messages: [...turn.history, turn.message] })
+  const threadMessages = await validateUIMessages({ messages: [...turn.history, turn.retry ? turn.message : stampSent(turn.message)] })
 
   // Save the learner's question before calling the model, so a failed or dropped reply never loses it.
   if (turn.retry)

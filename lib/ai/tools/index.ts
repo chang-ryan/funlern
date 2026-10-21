@@ -2,8 +2,10 @@ import type { InferUITools, UIMessage } from 'ai'
 import type { SessionMode } from '@/lib/plans/modes'
 import { updatePlanDoc } from '@/lib/db/plans'
 import { saveQuiz } from '@/lib/db/quizzes'
+import { recordSearch, searchesToday } from '@/lib/db/searches'
 import { canWriteTraining } from '@/lib/plans/modes'
-import { createQuiz, updateDoc } from './schemas'
+import { SEARCH_LIMITS, searchWeb } from '@/lib/search/web'
+import { createQuiz, updateDoc, webSearch } from './schemas'
 import 'server-only'
 
 export interface ToolContext {
@@ -22,6 +24,8 @@ export interface ToolContext {
 // ask_user stays out until its card exists.
 export function toolsFor(ctx: ToolContext) {
   const owner = { userId: ctx.userId, conversationId: ctx.conversationId }
+  // One toolsFor per request, so this counts searches within a turn.
+  let searches = 0
   return {
     create_quiz: {
       ...createQuiz,
@@ -41,11 +45,25 @@ export function toolsFor(ctx: ToolContext) {
         return { version: await updatePlanDoc({ ...input, planId: ctx.planId, conversationId: ctx.conversationId }) }
       },
     },
+    web_search: {
+      ...webSearch,
+      execute: async ({ query }: { query: string }) => {
+        if (!ctx.planId)
+          throw new Error('This chat has no plan.')
+        if (++searches > SEARCH_LIMITS.perTurn)
+          throw new Error(`At most ${SEARCH_LIMITS.perTurn} searches a turn. Answer with what you found.`)
+        if (await searchesToday(ctx.userId) >= SEARCH_LIMITS.perDay)
+          throw new Error('The learner has used today\'s searches. Answer from what you know and say it may be out of date.')
+        const results = await searchWeb(query)
+        await recordSearch({ ...owner, query, results: results.length })
+        return { results }
+      },
+    },
   }
 }
 
 /**
- * Plan sessions let the tutor decide when to write a doc; other chats never call a tool unforced. A thread
+ * Plan sessions let the tutor decide when to write a doc or search; other chats never call a tool unforced. A thread
  * must use its session's choice: tool_choice is part of what the cache matches, so a mismatch misses main's cache.
  */
 export function toolChoiceFor(conversation: { planId: string | null }) {
