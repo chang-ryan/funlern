@@ -25,7 +25,7 @@ export default async function MissionControlPage({ params, searchParams }: PageP
     firstMessage,
     stayOnPage: true,
     // Stays above the conversation, refreshed after each reply.
-    intro: <MissionIntro planId={plan.id} docs={docs} materials={materials.length} />,
+    intro: { label: 'mission control', content: <MissionIntro planId={plan.id} docs={docs} materials={materials.length} /> },
     suggestions: missionSuggestions({ hasTraining: docs.some(d => d.kind === 'training'), materials: materials.length }),
   }
 

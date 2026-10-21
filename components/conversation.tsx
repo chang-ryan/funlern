@@ -57,8 +57,8 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
   trainingStyle?: TrainingStyle | null
   /** Sent as soon as the conversation mounts, e.g. typed on the plan page. */
   firstMessage?: string
-  /** A panel that stays above the transcript (mission control). */
-  intro?: ReactNode
+  /** A panel that stays above the transcript and slides shut (mission control); label names it for the toggle. */
+  intro?: { label: string, content: ReactNode }
   /** Suggested messages on the composer, sent in one click; none unless given. */
   suggestions?: string[]
   /** The page's own URL, not /c/{id}, is the session's address (mission control at /p/[id]/mc). */

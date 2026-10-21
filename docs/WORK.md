@@ -239,7 +239,7 @@ What to borrow (MIT code can be copied with its license notice):
   - [ ] Trainer principles in training sessions and mission control; setup offers a tutor-designed or co-designed Method (iterate on real setup sessions)
   - [x] 4.2 `training.md` (Method, Rubric) is set up with the learner in mission control ("Set up training" under the composer, or Set up in the panel); a training session needs it; reps log to Log and Next with `update_doc` until 4.4
 - Mission control
-  - [x] One continuous `mission` session per plan at `/p/[id]/mc` (unique per plan, fixed title, never in Recents; `/c/{id}` redirects there); its prompt shapes the plan and sets up training, and it may edit all three docs
+  - [x] One continuous `mission` session per plan at `/p/[id]/mc` (unique per plan, fixed title, never in Recents; `/c/{id}` redirects there; its plan panel slides shut from a caret on its bottom border); its prompt shapes the plan and sets up training, and it may edit all three docs
   - [x] The wizard lands there: an intro of what the plan holds, with suggested first messages; the panel is titled Mission Control, and the title links there
   - [ ] Compaction before it gets long; decide between re-pinning docs per visit and relying on folds
   - [ ] Delete mission control with its plan (decided; built with plan deletion)
