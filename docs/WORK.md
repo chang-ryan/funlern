@@ -32,6 +32,7 @@ Agreed 2026-10-20. Chat sessions live in a **plan**; chats without one are liste
 - **Reps:** the tutor's answer key goes through `set_rep_key` into `session_secrets`; the saved call keeps the key for the model and is stripped from the stream and page loads. `log_rep` appends the Log row, replaces Next and reveals the key. The log grows without limit for now.
 - **Trainer principles (proposed 2026-10-20):** a learner may not know what to rep; working that out is part of the skill, so the tutor helps. Training sessions and mission control (which sets training up) carry a short list of coaching principles distilled from a practice scheme built by hand: measure before teaching, find the one cause behind the misses, small reps with a fixed output and the comfortable dodge ruled out, pass/fail marks decided before reading the answer, assisted kept apart from unaided, progress only on unseen prompts with an exit test per stage, a Log row for every rep, a floor over a schedule, and the learner owns Method and Rubric. Setup asks whether the tutor should design the Method and Rubric itself (from one or two cold attempts, or from the brief) or build them with the learner. Principles first; worked examples only if the principles fall short.
 - **Mission control (first version built 2026-10-20):** each plan has one continuous session for adjusting the plan itself, at `/p/[id]/mc`, opened from the plan page. There are no new sessions: you always return to the same one. Creating a plan lands there: it shows what the wizard drafted (brief, syllabus, material), says what you can change, and offers training setup when it fits. It may edit all three docs, including `training.md`. Open questions: the session never ends, so it needs compaction before it gets long; and its system prompt can't stay pinned to the docs it started with forever, so it either re-pins on each visit (one cold cache per visit) or relies on `<plan_updated>` folds.
+- **Deleting a plan (decided 2026-10-20):** deletes its mission control with it; its other sessions move to Uncategorized. Built along with plan deletion, which doesn't exist yet.
 - **Defaults taken (change any):** rep style fixed at start; plan sessions use `toolChoice: 'auto'` and `ask_user` leaves the tool set until its card exists; deleting a plan moves its sessions to Uncategorized; material capped at 5 files and about 30k tokens per plan.
 
 ### Ask-user cards and quizzes
@@ -155,7 +156,7 @@ Threads point at both the conversation and the exact message they quote; `snapsh
 | Prompts | TypeScript modules in the repo, versioned by git; no hosted prompt manager | Only developers edit them; typed arguments and diffs come free |
 | Migrations | Drizzle generates into `supabase/migrations`; the Supabase CLI applies them. One migration per task, checked by `drizzle-kit check` and squawk | One runner that knows the auth schema; `db reset` and `db push` work locally and on hosted |
 | Local dev | `supabase start` in Docker on ports 553xx; hosted values in `.env.remote` | Real Auth and Mailpit locally; 553xx avoids another local Supabase project on the defaults |
-| Testing | Vitest for pure logic (anchors, fold, side-question rendering); an opt-in smoke script for the full stack; no component tests yet | Cheap coverage where bugs hide; the smoke test calls Claude, so it stays out of `pnpm test` |
+| Testing | Vitest for pure logic and snapshots of prompts and tool definitions; a smoke script for the full stack against a scripted model (`MOCK_MODEL=1`); a few live evals with real Claude; no component tests yet | Structure is checked deterministically and free in seconds; only what needs a model's judgment (decided 2026-10-20) pays for Claude calls |
 | Tools | Native tool calling via AI SDK `tool()` with zod schemas; one registry, no MCP | Every supported provider has tool calling; zod validates every call |
 
 ## Framework comparison
@@ -211,7 +212,7 @@ What to borrow (MIT code can be copied with its license notice):
 - [x] Thread rail positioning and overlap
 - [x] Thread UI: comment-style cards, reply box, mobile drawer
 - [ ] Check the mobile drawer on a real phone
-- [x] Tests: Vitest unit tests (`pnpm test`) and an opt-in smoke test (`pnpm test:smoke`)
+- [x] Tests: Vitest unit tests (`pnpm test`), a smoke test against a scripted model (`pnpm dev:mock`, `pnpm test:smoke`), and live evals (`pnpm test:evals`)
 - [x] Fold thread exchanges into main (`data-side-questions`, `folded_through`)
 
 ### M1 MVP
@@ -238,7 +239,7 @@ What to borrow (MIT code can be copied with its license notice):
   - [x] One continuous `mission` session per plan at `/p/[id]/mc` (unique per plan, fixed title, never in Recents; `/c/{id}` redirects there); its prompt shapes the plan and sets up training, and it may edit all three docs
   - [x] The wizard lands there: an intro of what the plan holds, with suggested first messages; the panel is titled Mission Control, and the title links there
   - [ ] Compaction before it gets long; decide between re-pinning docs per visit and relying on folds
-  - [ ] Deleting a plan moves its sessions to Uncategorized, including mission control: delete that one instead
+  - [ ] Delete mission control with its plan (decided; built with plan deletion)
   - [ ] 4.3 `set_rep_key` and `session_secrets`; key stripped from the stream and page loads
   - [ ] 4.4 `log_rep`: append the Log row, replace Next, reveal the key
 - [ ] `ask_user` tool and card
@@ -259,7 +260,7 @@ What to borrow (MIT code can be copied with its license notice):
 - [x] Prompt and tool registry scaffold
 - [ ] Tool-call repair
 - [x] Prompt snapshot test (`lib/ai/prompts/prompts.test.ts`); prompts written with `dedent`
-- [ ] Prompt version hash on messages; add tool definitions to the snapshot once tools are wired
+- [ ] Prompt version hash on messages (tool definitions are now snapshotted)
 
 ### Later
 - [ ] Move an Uncategorized chat into a plan: UI (punted 2026-10-20; server action `movePlanSession` exists)

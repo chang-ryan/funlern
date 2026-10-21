@@ -9,6 +9,7 @@ import { finishMetadata, saveReplyWhenDone } from '@/lib/ai/reply'
 import { systemFor } from '@/lib/ai/system'
 import { toolChoiceFor, toolsFor } from '@/lib/ai/tools'
 import { placeTurn } from '@/lib/ai/turn'
+import { NOT_FOUND, UNAUTHORIZED } from '@/lib/auth'
 import { deleteThreadMessagesFrom, getConversation, getMessages, getThread, getThreadMessages, saveThreadMessages } from '@/lib/db/queries'
 import { textOf } from '@/lib/messages'
 import { getUserId } from '@/lib/supabase/server'
@@ -16,12 +17,12 @@ import { getUserId } from '@/lib/supabase/server'
 export async function POST(req: Request) {
   const userId = await getUserId()
   if (!userId)
-    return new Response('Unauthorized', { status: 401 })
+    return UNAUTHORIZED()
 
   const { id, message }: { id: string, message: UIMessage } = await req.json()
   const t = await getThread(userId, id)
   if (!t)
-    return new Response('Not found', { status: 404 })
+    return NOT_FOUND()
 
   // Frozen fork: main as it stood when the thread opened, then this thread's own turns.
   const prefix = await toModelMessages(await getMessages(t.conversationId, t.snapshotIndex))

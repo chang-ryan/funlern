@@ -1,9 +1,11 @@
 'use client'
 
+import type { MaterialUpload } from '@/lib/plans/upload'
 import { useRouter } from 'next/navigation'
 import { useRef, useState, useTransition } from 'react'
 import { deleteMaterial } from '@/app/p/[id]/material/actions'
 import { MATERIAL_LIMITS } from '@/lib/plans/material'
+import { uploadMaterial } from '@/lib/plans/upload'
 import { shortDate } from './format'
 
 interface Item { id: string, kind: 'pdf' | 'markdown' | 'paste', name: string, text: string, pages: number | null, tokens: number, createdAt: Date }
@@ -25,40 +27,23 @@ export function MaterialList({ planId, items }: { planId: string, items: Item[] 
   const used = items.reduce((n, m) => n + m.tokens, 0)
   const full = items.length >= MATERIAL_LIMITS.files
 
-  async function add(body: FormData, label: string) {
+  async function add(upload: MaterialUpload, label: string) {
     setBusy(label)
     setError(null)
-    try {
-      const res = await fetch(`/api/plans/${planId}/materials`, { method: 'POST', body })
-      if (!res.ok) {
-        setError((await res.json().catch(() => null))?.error ?? 'Couldn\'t add that file.')
-        return false
-      }
+    const refusal = await uploadMaterial(planId, upload)
+    setBusy(null)
+    setError(refusal)
+    if (!refusal)
       router.refresh()
-      return true
-    }
-    catch {
-      setError('Couldn\'t add that file.')
-      return false
-    }
-    finally {
-      setBusy(null)
-    }
+    return !refusal
   }
 
   async function upload(file: File) {
-    const body = new FormData()
-    body.set('file', file)
-    await add(body, file.type === 'application/pdf' ? `Reading ${file.name}…` : `Adding ${file.name}…`)
+    await add({ file }, file.type === 'application/pdf' ? `Reading ${file.name}…` : `Adding ${file.name}…`)
   }
 
   async function savePaste() {
-    if (!paste)
-      return
-    const body = new FormData()
-    body.set('name', paste.name)
-    body.set('text', paste.text)
-    if (await add(body, 'Adding pasted text…'))
+    if (paste && await add(paste, 'Adding pasted text…'))
       setPaste(null)
   }
 

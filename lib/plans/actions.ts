@@ -2,23 +2,15 @@
 
 import type { WizardInput } from './wizard'
 import { generateText, Output } from 'ai'
-import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { currentModel } from '@/lib/ai/model'
+import { currentModel, NO_THINKING } from '@/lib/ai/model'
 import { planDraftPrompt } from '@/lib/ai/prompts/tasks/plan-draft'
+import { requireUser } from '@/lib/auth'
 import { getActiveMaterials } from '@/lib/db/materials'
 import * as plans from '@/lib/db/plans'
 import { getConversation } from '@/lib/db/queries'
-import { getUserId } from '@/lib/supabase/server'
 import { renderDoc } from './docs'
 import { LEVELS, SERIOUSNESS } from './wizard'
-
-async function requireUser() {
-  const userId = await getUserId()
-  if (!userId)
-    redirect('/login')
-  return userId
-}
 
 const wizardInput = z.object({
   what: z.string().trim().min(1).max(2000),
@@ -57,7 +49,7 @@ export async function draftPlan(planId: string, input: WizardInput) {
     model: await currentModel(),
     output: Output.object({ schema: draft }),
     prompt: planDraftPrompt(answers, material),
-    providerOptions: { anthropic: { thinking: { type: 'disabled' } } },
+    providerOptions: NO_THINKING,
   })
   await plans.writeDocVersion({ planId: plan.id, kind: 'brief', body: renderDoc('brief', output.brief), author: 'tutor', summary: 'First draft' })
   await plans.writeDocVersion({ planId: plan.id, kind: 'syllabus', body: renderDoc('syllabus', output.syllabus), author: 'tutor', summary: 'First draft' })

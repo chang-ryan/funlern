@@ -1,5 +1,6 @@
 import { tool } from 'ai'
 import { z } from 'zod'
+import { DOC_FILE, DOC_KINDS, DOC_SECTIONS } from '@/lib/plans/docs'
 
 // Tool definitions without server code, so client cards can import them for types.
 // Keep schemas flat with enums and a .describe() per field: small open-weight models fail on complex ones.
@@ -44,6 +45,9 @@ export const createQuiz = tool({
   }),
 })
 
+// Every section name across the doc templates, so the tool's schema follows docs.ts.
+const ALL_SECTIONS = [...new Set(DOC_KINDS.flatMap(k => DOC_SECTIONS[k]))] as [string, ...string[]]
+
 /**
  * Server tool: rewrites one section of a plan doc as a new version (the execute is bound per request in
  * ./index.ts). Only plan sessions can call it.
@@ -51,8 +55,8 @@ export const createQuiz = tool({
 export const updateDoc = tool({
   description: 'Rewrite one section of the learner\'s plan doc, e.g. tick off a unit in syllabus.md or add a rep to training.md\'s Log. Only at natural points: after quiz results, when a unit or rep is done, or when the learner asks. The whole section is replaced, so include everything that should stay. training.md is written only in training sessions and mission control.',
   inputSchema: z.object({
-    doc: z.enum(['brief', 'syllabus', 'training']).describe('brief.md, syllabus.md or training.md'),
-    section: z.enum(['Goal', 'Why', 'Level', 'Seriousness', 'Constraints', 'Units', 'Notes', 'Method', 'Rubric', 'Log', 'Next']).describe('brief: Goal, Why, Level, Seriousness, Constraints. syllabus: Units, Notes. training: Method, Rubric, Log, Next'),
+    doc: z.enum(DOC_KINDS).describe(DOC_KINDS.map(k => DOC_FILE[k]).join(', ')),
+    section: z.enum(ALL_SECTIONS).describe(DOC_KINDS.map(k => `${k}: ${DOC_SECTIONS[k].join(', ')}`).join('. ')),
     content: z.string().max(8000).describe('The new Markdown for the section, without its heading'),
     summary: z.string().max(100).describe('What changed, in a few words, e.g. "Marked closures done"'),
   }),

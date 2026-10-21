@@ -1,0 +1,165 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`tool definitions > ask_user 1`] = `
+{
+  "description": "Ask the learner a clarifying question with 2 to 4 options. Use it to pin down their goal, level or preference instead of guessing.",
+  "input": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false,
+    "properties": {
+      "options": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "description": {
+              "description": "One line of extra context",
+              "maxLength": 160,
+              "type": "string",
+            },
+            "label": {
+              "description": "Short answer text shown on the button",
+              "maxLength": 80,
+              "type": "string",
+            },
+          },
+          "required": [
+            "label",
+          ],
+          "type": "object",
+        },
+        "maxItems": 4,
+        "minItems": 2,
+        "type": "array",
+      },
+      "question": {
+        "maxLength": 200,
+        "type": "string",
+      },
+    },
+    "required": [
+      "question",
+      "options",
+    ],
+    "type": "object",
+  },
+}
+`;
+
+exports[`tool definitions > create_quiz 1`] = `
+{
+  "description": "Write a multiple-choice quiz on what you have covered with the learner: 1 to 5 questions, four choices each, one correct. Test understanding, not recall of wording. Plain text; use \`backticks\` for code.",
+  "input": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false,
+    "properties": {
+      "questions": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "answer": {
+              "description": "Index of the correct choice",
+              "maximum": 3,
+              "minimum": 0,
+              "type": "integer",
+            },
+            "choices": {
+              "description": "Four answer choices",
+              "items": {
+                "maxLength": 120,
+                "type": "string",
+              },
+              "maxItems": 4,
+              "minItems": 4,
+              "type": "array",
+            },
+            "explanation": {
+              "description": "Why the correct choice is right; shown after the learner answers",
+              "maxLength": 400,
+              "type": "string",
+            },
+            "question": {
+              "maxLength": 300,
+              "type": "string",
+            },
+          },
+          "required": [
+            "question",
+            "choices",
+            "answer",
+            "explanation",
+          ],
+          "type": "object",
+        },
+        "maxItems": 5,
+        "minItems": 1,
+        "type": "array",
+      },
+      "title": {
+        "description": "Short topic, e.g. "JavaScript closures"",
+        "maxLength": 80,
+        "type": "string",
+      },
+    },
+    "required": [
+      "title",
+      "questions",
+    ],
+    "type": "object",
+  },
+}
+`;
+
+exports[`tool definitions > update_doc 1`] = `
+{
+  "description": "Rewrite one section of the learner's plan doc, e.g. tick off a unit in syllabus.md or add a rep to training.md's Log. Only at natural points: after quiz results, when a unit or rep is done, or when the learner asks. The whole section is replaced, so include everything that should stay. training.md is written only in training sessions and mission control.",
+  "input": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false,
+    "properties": {
+      "content": {
+        "description": "The new Markdown for the section, without its heading",
+        "maxLength": 8000,
+        "type": "string",
+      },
+      "doc": {
+        "description": "brief.md, syllabus.md, training.md",
+        "enum": [
+          "brief",
+          "syllabus",
+          "training",
+        ],
+        "type": "string",
+      },
+      "section": {
+        "description": "brief: Goal, Why, Level, Seriousness, Constraints. syllabus: Units, Notes. training: Method, Rubric, Log, Next",
+        "enum": [
+          "Goal",
+          "Why",
+          "Level",
+          "Seriousness",
+          "Constraints",
+          "Units",
+          "Notes",
+          "Method",
+          "Rubric",
+          "Log",
+          "Next",
+        ],
+        "type": "string",
+      },
+      "summary": {
+        "description": "What changed, in a few words, e.g. "Marked closures done"",
+        "maxLength": 100,
+        "type": "string",
+      },
+    },
+    "required": [
+      "doc",
+      "section",
+      "content",
+      "summary",
+    ],
+    "type": "object",
+  },
+}
+`;
