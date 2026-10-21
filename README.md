@@ -33,8 +33,11 @@ pnpm dev
 
 ## Tests
 
-- `pnpm test`: Vitest unit tests for the pure logic (anchors, folding threads into main, side-question rendering).
-- `pnpm test:smoke`: end to end against the local stack (sign in through Mailpit, chat, thread, fold). Needs `pnpm db:start` and `pnpm dev`; calls Claude, so it is opt-in.
+- `pnpm test`: Vitest unit tests for the pure logic, plus snapshots of every prompt and tool definition (they're the cached prefix, so a change must be on purpose: `pnpm test -u`).
+- `pnpm test:smoke`: end to end against the local stack with a scripted model, so it checks what the server sends, saves and puts in context without calling Claude (a few seconds). Run `pnpm db:start` and `pnpm dev:mock` (port 3100) first. The scripted model is in `lib/ai/mock-model.ts`; a learner message can ask it to echo its whole request (`[mock:echo]`) or call a tool (`[mock:tool update_doc {...}]`).
+- `pnpm test:evals`: a few live checks with real Claude that only a model can pass: does the tutor use its brief, folded edits and material, and call its tools from plain language. Run against `pnpm dev` (port 3000, or set `APP_URL`); it costs a little and can flake on wording.
+
+Next allows one dev server per checkout, so stop `pnpm dev` before `pnpm dev:mock` in the same folder.
 
 ## Database changes
 

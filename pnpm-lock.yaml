@@ -60,6 +60,9 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
     devDependencies:
+      '@ai-sdk/provider':
+        specifier: 4.0.27
+        version: 4.0.27
       '@antfu/eslint-config':
         specifier: ^9.5.1
         version: 9.5.1(@eslint-react/eslint-plugin@5.23.3(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3))(@next/eslint-plugin-next@16.3.8(eslint@10.11.0(jiti@2.7.0)))(@typescript-eslint/typescript-estree@8.71.0(typescript@5.9.3))(@typescript-eslint/utils@8.71.0(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3))(@vue/compiler-sfc@3.5.43)(eslint-plugin-react-refresh@0.5.7(eslint@10.11.0(jiti@2.7.0)))(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3)(vitest@5.0.3(@types/node@20.19.43)(happy-dom@20.14.6)(vite@8.3.4(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))
