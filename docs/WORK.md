@@ -17,7 +17,7 @@ Three milestones: the POC proves side threads, the MVP adds the learning loop, a
 | M0 POC | Highlight to ask, side-thread rail, side questions folded into main, Claude only | I can pick apart one long answer with three or more threads |
 | M1 MVP | Learning setup, ask-user cards, context compaction | I use it for a week instead of Claude chat for one topic |
 | Later | Pop quizzes, XP and streak, free-text grading, spaced review of missed concepts, concept mastery map, shareable sessions for the showcase, selectable tutor avatars (unlocked with XP first, paid later), bring-your-own models (DeepSeek, Kimi, GLM, OpenRouter) | Picked after M1 |
-| Pinned | Web search tool with cited sources (see Web search) | Scheduled once a topic I study needs facts newer than the model's cutoff |
+| Pinned | Web search beyond the MVP: caching by query, a check-this button, search outside plans (see Web search) | Once the MVP shows it's used |
 
 ### Plans
 
@@ -67,9 +67,11 @@ XP comes only from quizzes: 10 for correct first try, 3 for correct after a miss
 - **Schema:** plan tables (see Plans and the work tracker); `quizzes`, `quiz_questions`, `quiz_answers` (built); add a concept tag per question for per-concept accuracy.
 - **Threads must send the same tool definitions as main.** Tools sit at the front of the cached prefix, so a thread without them misses the cache. Threads set `toolChoice: "none"` instead.
 
-### Web search (pinned)
+### Web search
 
-Pinned, not scheduled. The tutor gets one `web_search` tool that we run ourselves, so it works with every model, including DeepSeek, Kimi and GLM. Provider-built search (Anthropic, OpenAI) only works with that vendor's models.
+MVP built 2026-10-21, chosen as the cheapest path: our own `web_search` tool on Tavily's free tier (1,000 basic searches a month, then $0.008 each), returning the top 3 results with 600-character snippets so few result tokens reach the model. Anthropic's built-in search costs $10 per 1,000 plus every result as input, and its `encrypted_content` must round-trip exactly through our stored messages. Plan sessions only (they already use `toolChoice: 'auto'`); 2 searches a turn and 30 a day per learner, logged in `web_searches`; sources listed under the reply. The rest of this section is the fuller plan.
+
+The tutor gets one `web_search` tool that we run ourselves, so it works with every model, including DeepSeek, Kimi and GLM. Provider-built search (Anthropic, OpenAI) only works with that vendor's models.
 
 - **Backend:** Tavily, 1,000 free searches a month, then about $0.008 each. Google Custom Search is closed to new signups and shuts down on 2027-01-01.
 - **Tool:** input `{ query }`; returns the top 5 results (title, URL, trimmed content). The server holds the key; bring-your-own search key later.

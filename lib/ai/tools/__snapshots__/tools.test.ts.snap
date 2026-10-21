@@ -163,3 +163,25 @@ exports[`tool definitions > update_doc 1`] = `
   },
 }
 `;
+
+exports[`tool definitions > web_search 1`] = `
+{
+  "description": "Search the web. Use it for facts that may be newer than your training or that you are unsure of, and when the learner asks you to look something up; not for what you already know well. Cite what you use by title and link.",
+  "input": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false,
+    "properties": {
+      "query": {
+        "description": "A short search query, as you would type it into a search engine",
+        "maxLength": 200,
+        "minLength": 2,
+        "type": "string",
+      },
+    },
+    "required": [
+      "query",
+    ],
+    "type": "object",
+  },
+}
+`;
