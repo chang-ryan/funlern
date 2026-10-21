@@ -48,7 +48,7 @@ const threadTransport = transportFor('/api/thread')
 /** Persisted conversation with side threads anchored on highlighted passages. */
 export function Conversation({ id, isNew = false, start, mode = start?.mode ?? 'learning', trainingStyle = null, firstMessage, intro, suggestions, stayOnPage = false, title, plan, model, initialMessages, initialThreads }: {
   id: string
-  /** Not saved yet: the server creates it with the first message, then the URL becomes /c/{id}. */
+  /** Not saved yet: the server creates it with the first message. */
   isNew?: boolean
   /** How a new session starts (its plan and mode): sent with the first message, which creates it. */
   start?: SessionStart
@@ -61,7 +61,7 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
   intro?: ReactNode
   /** Suggested messages on the composer, sent in one click; none unless given. */
   suggestions?: string[]
-  /** Keep the page's URL once saved (mission control lives at /p/[id]/mc), instead of moving to /c/{id}. */
+  /** The page's own URL, not /c/{id}, is the session's address (mission control at /p/[id]/mc). */
   stayOnPage?: boolean
   title: string | null
   /** The plan the session is in, for the breadcrumb. */
@@ -100,10 +100,14 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
     id,
     messages: initialMessages,
     transport: chatTransport,
-    // A page that shows the plan beside the chat (mission control) re-reads it after each reply, which may have edited it.
+    // A page that shows the plan beside the chat (mission control) re-reads it after each reply, which may have
+    // edited it. A new session's page re-renders once its first reply is saved (just after the stream ends), so
+    // Next's cached copy, which Back and Forward replay, is the saved conversation rather than an empty new one.
     onFinish: () => {
       if (stayOnPage)
         router.refresh()
+      else if (isNew)
+        setTimeout(() => router.refresh(), 1000)
     },
     // The server adds folded side questions and rebuilt quiz results to this turn's learner message.
     // On the first turn it also sends the title it generated.
@@ -136,19 +140,16 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
     const timer = setTimeout(() => {
       sentFirstRef.current = true
       sendMessage({ text: firstMessage }, isNew && start ? { body: { start } } : undefined)
-      // A first message that came in the URL (?do=…) must not be sent again on reload.
+      // A first message that came in the URL (?do=…) must not be sent again on reload. Through the router, so
+      // Next's history stays in step with the URL.
       if (stayOnPage)
-        window.history.replaceState(null, '', window.location.pathname)
+        router.replace(window.location.pathname, { scroll: false })
     })
     return () => clearTimeout(timer)
-  }, [firstMessage, start, isNew, stayOnPage, sendMessage])
+  }, [firstMessage, start, isNew, stayOnPage, sendMessage, router])
 
-  // A reply arriving means the server has saved the conversation; give it its real URL.
+  // A reply arriving means the server has saved the conversation.
   const saved = !isNew || messages.some(m => m.role === 'assistant')
-  useEffect(() => {
-    if (isNew && saved && !stayOnPage)
-      window.history.replaceState(null, '', `/c/${id}`)
-  }, [isNew, saved, id, stayOnPage])
 
   // Show the Ask button for a settled selection inside one finished tutor message.
   useEffect(() => {

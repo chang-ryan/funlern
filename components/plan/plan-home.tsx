@@ -1,11 +1,12 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import type { SessionMode, SessionStart, TrainingStyle } from '@/lib/plans/modes'
+import type { SessionMode, TrainingStyle } from '@/lib/plans/modes'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Composer } from '@/components/chat/composer'
-import { Conversation } from '@/components/conversation'
+import { setPendingStart } from '@/lib/pending-start'
 import { sessionLabel, TRAINING_STYLE_HINT, TRAINING_STYLE_LABEL, TRAINING_STYLES } from '@/lib/plans/modes'
 import { UNTITLED_PLAN } from './format'
 import { PlanShell } from './plan-shell'
@@ -14,45 +15,27 @@ import { SessionList } from './session-list'
 
 /**
  * The plan page: title, a composer that starts a learning or training session in the plan, and its recent
- * sessions. Sending swaps the whole page for the new session, which saves itself and moves to /c/{id}. The
- * mode is fixed once the session starts. Training needs training.md, which mission control sets up.
+ * sessions. Sending opens the new session at /c/{id} with the message, which starts it there. The mode is fixed
+ * once the session starts. Training needs training.md, which mission control sets up.
  */
-export function PlanHome({ plan, sessions, model, files, hasTraining, initialMode = 'learning' }: {
+export function PlanHome({ plan, sessions, files, hasTraining, initialMode = 'learning' }: {
   plan: { id: string, title: string | null }
   sessions: { id: string, title: string | null, mode: SessionMode, trainingStyle: TrainingStyle | null, createdAt: Date }[]
-  model: string
   files: ReactNode
   hasTraining: boolean
   initialMode?: SessionMode
 }) {
   const [mode, setMode] = useState<SessionMode>(initialMode)
   const [style, setStyle] = useState<TrainingStyle>('guided')
-  const [started, setStarted] = useState<{ id: string, text: string, start: SessionStart } | null>(null)
-
-  if (started) {
-    return (
-      <Conversation
-        id={started.id}
-        isNew
-        start={started.start}
-        trainingStyle={started.start.style ?? null}
-        firstMessage={started.text}
-        title={null}
-        plan={plan}
-        model={model}
-        initialMessages={[]}
-        initialThreads={[]}
-      />
-    )
-  }
+  const router = useRouter()
 
   const name = plan.title ?? UNTITLED_PLAN
   const setup = mode === 'training' && !hasTraining
-  const begin = (text: string) => setStarted({
-    id: crypto.randomUUID(),
-    text,
-    start: { planId: plan.id, mode, style: mode === 'training' && hasTraining ? style : undefined },
-  })
+  function begin(text: string) {
+    const id = crypto.randomUUID()
+    setPendingStart(id, { text, plan, start: { planId: plan.id, mode, style: mode === 'training' && hasTraining ? style : undefined } })
+    router.push(`/c/${id}`)
+  }
 
   return (
     <PlanShell back={{ href: '/', label: 'All plans' }} files={files}>
