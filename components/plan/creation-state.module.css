@@ -31,7 +31,7 @@
   pointer-events: none;
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
-  animation: rainbow-orbit 4s linear infinite;
+  animation: rainbow-orbit 3s linear infinite;
 }
 
 .panel {
