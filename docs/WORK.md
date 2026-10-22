@@ -239,7 +239,7 @@ What to borrow (MIT code can be copied with its license notice):
   - [ ] Trainer principles in training sessions and mission control; setup offers a tutor-designed or co-designed Method (iterate on real setup sessions)
   - [x] 4.2 `training.md` (Method, Rubric) is set up with the learner in mission control ("Set up training" under the composer, or Set up in the panel); a training session needs it; reps log to Log and Next with `update_doc` until 4.4
 - Mission control
-  - [x] One continuous `mission` session per plan at `/p/[id]/mc` (unique per plan, fixed title, never in Recents; `/c/{id}` redirects there); its prompt shapes the plan and sets up training, and it may edit all three docs
+  - [x] One continuous `mission` session per plan at `/p/[id]/mc` (unique per plan, fixed title, never in Recents; `/c/{id}` redirects there; its plan panel slides shut from a caret on its bottom border); its prompt shapes the plan and sets up training, and it may edit all three docs
   - [x] The wizard lands there: an intro of what the plan holds, with suggested first messages; the panel is titled Mission Control, and the title links there
   - [ ] Compaction before it gets long; decide between re-pinning docs per visit and relying on folds
   - [ ] Delete mission control with its plan (decided; built with plan deletion)
@@ -247,14 +247,15 @@ What to borrow (MIT code can be copied with its license notice):
   - [ ] 4.4 `log_rep`: append the Log row, replace Next, reveal the key
 - [ ] `ask_user` tool and card
 - [ ] Context compaction (rolling summary)
-- [x] Conversation header: click the title to edit it, sidebar icon (drawer not built)
+- [x] Conversation header: click the title to edit it; the menu icon opens a left drawer with Profile (not built yet) and Log out
 - [x] Generated conversation titles: Haiku names the conversation from its first message, alongside the reply; a rename wins
 - [x] Slash-command menu in the main composer: `/` lists Quiz Me and Create Study Guide, filters on label or command, picking fills `/name ` (server doesn't run them yet)
 - [x] `/quiz-me`: the model must call `create_quiz` (server tool, thinking off for that call); its execute saves `quizzes` + `quiz_questions` (choices shuffled) scoped to the request's user and conversation. The saved/streamed card keeps questions and choices only. The card grades each pick through a server action (`quiz_answers`), resumes after reload, and ends with Finish or Exit; ending sends a learner message whose results the server rebuilds from the database, and the tutor reviews (misses and skips explained, takeaways if all right). The main chat is blocked (client and server) while a quiz is active; threads are not
 - [ ] `/create-study-guide` (reaches the tutor as plain text for now)
 - [ ] Quiz: other answer types (free text graded by the model); a check on the model's answer key (or a "this answer is wrong" button); rate limit /quiz-me
 - [ ] Push the `quizzes`, `plans`, `session_modes` and `plan_materials` migrations to hosted (`pnpm db:push`); create the hosted `materials` bucket (`supabase seed buckets --linked`); set `SUPABASE_SECRET_KEY` there
-- [x] New chats are saved on the first message (`/new`, id picked client-side); backing out of an empty chat leaves no row
+- [x] New chats are saved on the first message: they open at their real `/c/{id}` straight away (`/new` redirects to a fresh id; the plan hub navigates there with its first message in memory), so every link, Back and Forward is a real navigation; backing out of an empty chat leaves no row
+- [x] One top bar on every page, from the root layout's `@crumbs` slot (server-rendered with the page, so no flash): funlern / plan / page. A chat's title in it follows the generated title and renames in place; the old per-page "← All plans" back links are gone
 - [x] Tutor copy button shows on hover (always on touch); scroll-to-bottom arrow fades in and out (200ms)
 - [x] Model picker under the chat bar: Haiku 5.5 / Sonnet 5.5, saved in a cookie that the main and thread routes read
 - [x] Reply hardening: learner message saved before the model call; reply saved from the server's own stream copy (survives dropped connections); finish reason in `metadata`; cut-off/error notice with Retry; retries replace instead of duplicating

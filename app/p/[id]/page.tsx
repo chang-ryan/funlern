@@ -1,6 +1,5 @@
 import { PlanFiles } from '@/components/plan/plan-files'
 import { PlanHome } from '@/components/plan/plan-home'
-import { currentModelId } from '@/lib/ai/model'
 import { getPlanSessions } from '@/lib/db/plans'
 import { loadPlan } from './load'
 
@@ -8,7 +7,7 @@ export default async function PlanPage({ params, searchParams }: PageProps<'/p/[
   const { id } = await params
   const { mode } = await searchParams
   const { userId, plan, docs, materials } = await loadPlan(id)
-  const [sessions, model] = await Promise.all([getPlanSessions(userId, plan.id), currentModelId()])
+  const sessions = await getPlanSessions(userId, plan.id)
 
   return (
     <PlanHome
@@ -16,7 +15,6 @@ export default async function PlanPage({ params, searchParams }: PageProps<'/p/[
       sessions={sessions.map(s => ({ id: s.id, title: s.title, mode: s.mode, trainingStyle: s.trainingStyle, createdAt: s.createdAt }))}
       hasTraining={docs.some(d => d.kind === 'training')}
       initialMode={mode === 'training' ? 'training' : 'learning'}
-      model={model}
       files={<PlanFiles planId={plan.id} docs={docs} materials={materials.length} />}
     />
   )

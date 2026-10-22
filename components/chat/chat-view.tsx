@@ -6,13 +6,14 @@ import { useEffect, useRef, useState } from 'react'
 import { replyProblem } from '@/lib/ai/turn'
 import { COMMANDS } from '@/lib/commands'
 import { awaitingText, hasContent } from '@/lib/messages'
+import { Drawer } from '../drawer'
 import { Composer } from './composer'
 import { Message, Typing } from './message'
 import { ModelPicker } from './model-picker'
 import { ReplyProblem } from './reply-problem'
 
 /** Presentational chat: scrolling transcript + composer. State lives in the caller's useChat. */
-export function ChatView({ messages, status, error, onSend, onStop, onRetry, model, session, top, suggestions, blocked, header, renderTutor, rail, overlay, transcriptRef, onTranscriptClick, onTranscriptPointerMove }: {
+export function ChatView({ messages, status, error, onSend, onStop, onRetry, model, session, top, suggestions, blocked, renderTutor, rail, overlay, transcriptRef, onTranscriptClick, onTranscriptPointerMove }: {
   messages: UIMessage[]
   status: ChatStatus
   error?: Error
@@ -24,13 +25,12 @@ export function ChatView({ messages, status, error, onSend, onStop, onRetry, mod
   model?: string
   /** Beside the model picker: the session's mode, when it isn't plain learning. */
   session?: ReactNode
-  /** A panel under the header that stays put while the transcript scrolls beneath it (mission control). */
-  top?: ReactNode
+  /** A panel under the header that stays put while the transcript scrolls beneath it, and slides shut (mission control). */
+  top?: { label: string, content: ReactNode }
   /** Suggested messages on the composer, sent in one click. Off unless given; mission control turns them on. */
   suggestions?: { items: string[], onPick: (text: string) => void }
   /** Why the learner can't send right now, e.g. a quiz waiting to be finished. */
   blocked?: string
-  header?: ReactNode
   renderTutor?: (message: UIMessage, index: number, streaming: boolean) => ReactNode
   /** Desktop column beside the transcript; scrolls with it. */
   rail?: ReactNode
@@ -107,11 +107,10 @@ export function ChatView({ messages, status, error, onSend, onStop, onRetry, mod
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {header}
       {top && (
-        <div className="shrink-0 border-b border-border">
-          <div className={`mx-auto px-4 pt-2 pb-4 ${width}`}>{top}</div>
-        </div>
+        <Drawer label={top.label}>
+          <div className={`mx-auto px-4 pt-2 pb-5 ${width}`}>{top.content}</div>
+        </Drawer>
       )}
       <div ref={scrollerRef} className="min-h-0 flex-1 overflow-y-auto">
         <div className={`mx-auto flex gap-8 px-4 py-6 ${width}`}>

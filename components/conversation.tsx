@@ -18,10 +18,10 @@ import { useMediaQuery } from '@/lib/hooks/use-media-query'
 import { usePressOutside } from '@/lib/hooks/use-press-outside'
 import { TITLE_PART } from '@/lib/messages'
 import { activeQuizId, QUIZ_RESULTS, quizIdOf, quizResultsOf } from '@/lib/quiz'
+import { offerSessionTitle, setSessionHead } from '@/lib/session-heads'
 import { AssistantMessage } from './assistant-message'
 import { ChatView } from './chat/chat-view'
 import { SessionModeChip } from './chat/session-mode'
-import { ConversationHeader } from './conversation-header'
 import { NewThreadCard, ThreadCard } from './thread'
 import { ThreadDrawer } from './thread-drawer'
 import { ThreadRail } from './thread-rail'
@@ -46,9 +46,9 @@ const chatTransport = transportFor('/api/chat')
 const threadTransport = transportFor('/api/thread')
 
 /** Persisted conversation with side threads anchored on highlighted passages. */
-export function Conversation({ id, isNew = false, start, mode = start?.mode ?? 'learning', trainingStyle = null, firstMessage, intro, suggestions, stayOnPage = false, title, plan, model, initialMessages, initialThreads }: {
+export function Conversation({ id, isNew = false, start, mode = start?.mode ?? 'learning', trainingStyle = null, firstMessage, intro, suggestions, stayOnPage = false, model, initialMessages, initialThreads }: {
   id: string
-  /** Not saved yet: the server creates it with the first message, then the URL becomes /c/{id}. */
+  /** Not saved yet: the server creates it with the first message. */
   isNew?: boolean
   /** How a new session starts (its plan and mode): sent with the first message, which creates it. */
   start?: SessionStart
@@ -57,21 +57,17 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
   trainingStyle?: TrainingStyle | null
   /** Sent as soon as the conversation mounts, e.g. typed on the plan page. */
   firstMessage?: string
-  /** A panel that stays above the transcript (mission control). */
-  intro?: ReactNode
+  /** A panel that stays above the transcript and slides shut (mission control); label names it for the toggle. */
+  intro?: { label: string, content: ReactNode }
   /** Suggested messages on the composer, sent in one click; none unless given. */
   suggestions?: string[]
-  /** Keep the page's URL once saved (mission control lives at /p/[id]/mc), instead of moving to /c/{id}. */
+  /** The page's own URL, not /c/{id}, is the session's address (mission control at /p/[id]/mc). */
   stayOnPage?: boolean
-  title: string | null
-  /** The plan the session is in, for the breadcrumb. */
-  plan?: { id: string, title: string | null }
   model: string
   initialMessages: UIMessage[]
   initialThreads: ThreadData[]
 }) {
   const [threads, setThreads] = useState(initialThreads)
-  const [currentTitle, setCurrentTitle] = useState(title)
   const [focusedId, setFocusedId] = useState<string | null>(null)
   // Threads from earlier visits start collapsed; new ones open expanded.
   const [collapsed, setCollapsed] = useState(() => new Set(initialThreads.map(t => t.id)))
@@ -100,16 +96,20 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
     id,
     messages: initialMessages,
     transport: chatTransport,
-    // A page that shows the plan beside the chat (mission control) re-reads it after each reply, which may have edited it.
+    // A page that shows the plan beside the chat (mission control) re-reads it after each reply, which may have
+    // edited it. A new session's page re-renders once its first reply is saved (just after the stream ends), so
+    // Next's cached copy, which Back and Forward replay, is the saved conversation rather than an empty new one.
     onFinish: () => {
       if (stayOnPage)
         router.refresh()
+      else if (isNew)
+        setTimeout(() => router.refresh(), 1000)
     },
     // The server adds folded side questions and rebuilt quiz results to this turn's learner message.
     // On the first turn it also sends the title it generated.
     onData: (part) => {
       if (part.type === TITLE_PART) {
-        setCurrentTitle(current => current ?? part.data as string)
+        offerSessionTitle(id, part.data as string)
         return
       }
       if (!isAddedPart(part.type))
@@ -136,19 +136,21 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
     const timer = setTimeout(() => {
       sentFirstRef.current = true
       sendMessage({ text: firstMessage }, isNew && start ? { body: { start } } : undefined)
-      // A first message that came in the URL (?do=…) must not be sent again on reload.
+      // A first message that came in the URL (?do=…) must not be sent again on reload. Through the router, so
+      // Next's history stays in step with the URL.
       if (stayOnPage)
-        window.history.replaceState(null, '', window.location.pathname)
+        router.replace(window.location.pathname, { scroll: false })
     })
     return () => clearTimeout(timer)
-  }, [firstMessage, start, isNew, stayOnPage, sendMessage])
+  }, [firstMessage, start, isNew, stayOnPage, sendMessage, router])
 
-  // A reply arriving means the server has saved the conversation; give it its real URL.
+  // A reply arriving means the server has saved the conversation.
   const saved = !isNew || messages.some(m => m.role === 'assistant')
+  // The top bar's crumb offers a rename once there's something saved to rename.
   useEffect(() => {
-    if (isNew && saved && !stayOnPage)
-      window.history.replaceState(null, '', `/c/${id}`)
-  }, [isNew, saved, id, stayOnPage])
+    if (isNew && saved)
+      setSessionHead(id, { saved: true })
+  }, [isNew, saved, id])
 
   // Show the Ask button for a settled selection inside one finished tutor message.
   useEffect(() => {
@@ -326,7 +328,6 @@ export function Conversation({ id, isNew = false, start, mode = start?.mode ?? '
       top={intro}
       suggestions={suggestions && { items: suggestions, onPick: send }}
       transcriptRef={transcriptRef}
-      header={<ConversationHeader id={id} title={currentTitle} setTitle={setCurrentTitle} saved={saved} plan={plan} />}
       onTranscriptClick={onTranscriptClick}
       onTranscriptPointerMove={onTranscriptPointerMove}
       renderTutor={(m, _i, streaming) => (

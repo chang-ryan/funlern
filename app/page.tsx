@@ -13,8 +13,6 @@ export default async function Home() {
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 overflow-y-auto px-4 py-8">
-      <h1 className="font-semibold tracking-tight">funlern</h1>
-
       <section aria-labelledby="plans" className="flex flex-col gap-2">
         <header className="flex items-center justify-between">
           <h2 id="plans" className="text-sm font-medium text-muted">Plans</h2>

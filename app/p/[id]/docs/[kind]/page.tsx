@@ -1,7 +1,6 @@
 import type { DocKind } from '@/lib/plans/docs'
 import { notFound } from 'next/navigation'
 import { DocEditor } from '@/components/plan/doc-editor'
-import { UNTITLED_PLAN } from '@/components/plan/format'
 import { PlanFiles } from '@/components/plan/plan-files'
 import { PlanShell } from '@/components/plan/plan-shell'
 import { getDocVersions } from '@/lib/db/plans'
@@ -19,7 +18,7 @@ export default async function PlanDocPage({ params }: PageProps<'/p/[id]/docs/[k
   const versions = doc ? await getDocVersions(plan.id, kind) : []
 
   return (
-    <PlanShell back={{ href: `/p/${plan.id}`, label: plan.title ?? UNTITLED_PLAN }} files={<PlanFiles planId={plan.id} docs={docs} materials={materials.length} active={kind} />}>
+    <PlanShell files={<PlanFiles planId={plan.id} docs={docs} materials={materials.length} active={kind} />}>
       {doc
         ? <DocEditor planId={plan.id} kind={kind} doc={doc} versions={versions} />
         : (
