@@ -246,6 +246,7 @@ What to borrow (MIT code can be copied with its license notice):
   - [ ] 4.3 `set_rep_key` and `session_secrets`; key stripped from the stream and page loads
   - [ ] 4.4 `log_rep`: append the Log row, replace Next, reveal the key
 - [ ] `ask_user` tool and card
+- [x] Plan creation: animated rainbow border around the Creating button while pending, with reduced-motion support; `/scratch/plan-loading` previews it without creating plans.
 - [ ] Context compaction (rolling summary)
 - [x] Conversation header: click the title to edit it; the menu icon opens a left drawer with Profile (not built yet) and Log out
 - [x] Generated conversation titles: Haiku names the conversation from its first message, alongside the reply; a rename wins

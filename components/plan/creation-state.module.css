@@ -1,0 +1,59 @@
+@property --plan-loading-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.frame {
+  position: relative;
+  isolation: isolate;
+  border-radius: 0.75rem;
+}
+
+.rainbow::before {
+  position: absolute;
+  z-index: 1;
+  inset: -2px;
+  padding: 2px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--plan-loading-angle),
+    #fb7185,
+    #fbbf24,
+    #a3e635,
+    #2dd4bf,
+    #60a5fa,
+    #a78bfa,
+    #f472b6,
+    #fb7185
+  );
+  content: '';
+  pointer-events: none;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: rainbow-orbit 4s linear infinite;
+}
+
+.panel {
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 1.5rem;
+}
+
+.create:disabled {
+  cursor: wait;
+  background: var(--surface);
+  color: var(--foreground);
+}
+
+@keyframes rainbow-orbit {
+  to {
+    --plan-loading-angle: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rainbow::before {
+    animation: none;
+  }
+}

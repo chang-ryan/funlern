@@ -7,6 +7,7 @@ import { draftPlan, startPlan } from '@/lib/plans/actions'
 import { MATERIAL_LIMITS } from '@/lib/plans/material'
 import { uploadMaterial } from '@/lib/plans/upload'
 import { LEVELS, SERIOUSNESS } from '@/lib/plans/wizard'
+import styles from './creation-state.module.css'
 
 /** Material picked in the form, uploaded once the plan exists. */
 type Pick = { kind: 'file', file: File } | { kind: 'paste', name: string, text: string }
@@ -108,6 +109,7 @@ export function WizardForm() {
 
   return (
     <form
+      aria-busy={pending}
       onSubmit={(e) => {
         e.preventDefault()
         submit()
@@ -167,10 +169,12 @@ export function WizardForm() {
         </div>
       </fieldset>
 
-      <div className="flex items-center gap-3">
-        <button type="submit" disabled={pending || !what.trim()} className="h-10 rounded-xl bg-student px-4 text-sm font-medium text-student-foreground disabled:opacity-40">
-          {pending ? 'Creating…' : 'Create plan'}
-        </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className={`${styles.frame} ${pending ? styles.rainbow : ''}`}>
+          <button type="submit" disabled={pending || !what.trim()} className={`h-10 rounded-xl bg-student px-4 text-sm font-medium text-student-foreground ${pending ? styles.create : 'disabled:opacity-40'}`}>
+            {pending ? 'Creating' : 'Create plan'}
+          </button>
+        </div>
         <p role="status" className="text-sm text-muted">
           {pending ? progress : error && <span className="text-incorrect">{error}</span>}
         </p>
