@@ -262,6 +262,7 @@ What to borrow (MIT code can be copied with its license notice):
 - [ ] `/create-study-guide` (reaches the tutor as plain text for now)
 - [x] Failure logging: `lib/log.ts` writes one searchable line per failure (`quiz failed`, `chat reply failed`, `reply stream failed`, `reply save failed`, `tool failed`, `title failed`) with ids and the error's validation issues, never the rejected value; `/quiz-me`'s caps are backstops (question 600, choice 240, explanation 1200), not targets
 - [x] Quiz card: answering the last question finishes the quiz (no Finish button; a quiz answered in full before a reload ends on load); results show your pick on every answered question, the answer when you missed it, and the explanation
+- [x] Home: a welcome line under "Hi, {name}" links to a modal with the ask-in-thread demo (`public/demo/ask-in-thread.mp4`, 1.1 MB, 44 s, no audio; loads only when opened)
 - [ ] Quiz: other answer types (free text graded by the model); a check on the model's answer key (or a "this answer is wrong" button); rate limit /quiz-me
 - [x] Push the `quizzes`, `plans`, `session_modes` and `plan_materials` migrations to hosted (`pnpm db:push`); create the hosted `materials` bucket (`supabase seed buckets --linked`); set `SUPABASE_SECRET_KEY` there
 - [x] New chats are saved on the first message: they open at their real `/c/{id}` straight away (`/new` redirects to a fresh id; the plan hub navigates there with its first message in memory), so every link, Back and Forward is a real navigation; backing out of an empty chat leaves no row
