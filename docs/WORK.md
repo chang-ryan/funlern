@@ -83,7 +83,7 @@ The tutor gets one `web_search` tool that we run ourselves, so it works with eve
 
 ## Data model
 
-All tables are defined in `lib/db/schema.ts`; Drizzle generates the migrations, applied locally (the hosted database is behind, on purpose, while this is a one-user app). Table names are plural to match Supabase's `auth.users`. `profiles` is our side of each account, one row per `auth.users` row, created by a signup trigger. Every `user_id` references `profiles`, so deleting a user cascades through all their data. Rolling summaries (`context_summaries`) are still only planned; see Context management.
+All tables are defined in `lib/db/schema.ts`; Drizzle generates the migrations, applied locally and then to hosted with `pnpm db:push`. Table names are plural to match Supabase's `auth.users`. `profiles` is our side of each account, one row per `auth.users` row, created by a signup trigger. Every `user_id` references `profiles`, so deleting a user cascades through all their data. Rolling summaries (`context_summaries`) are still only planned; see Context management.
 
 ```mermaid
 erDiagram
@@ -249,18 +249,19 @@ What to borrow (MIT code can be copied with its license notice):
 - [x] Plan creation: animated rainbow border around the Creating button while pending, with reduced-motion support; `/scratch/plan-loading` previews it without creating plans.
 - [ ] Context compaction (rolling summary)
 - [x] Conversation header: click the title to edit it; the menu icon opens a left drawer with Profile (not built yet) and Log out
+- [x] Names: a new sign-up gives a name on `/welcome` before anything else (home sends anyone without one there); accounts from before go by their email; home greets the learner with "Hi, {name}"
 - [x] Generated conversation titles: Haiku names the conversation from its first message, alongside the reply; a rename wins
 - [x] Slash-command menu in the main composer: `/` lists Quiz Me and Create Study Guide, filters on label or command, picking fills `/name ` (server doesn't run them yet)
 - [x] `/quiz-me`: the model must call `create_quiz` (server tool, thinking off for that call); its execute saves `quizzes` + `quiz_questions` (choices shuffled) scoped to the request's user and conversation. The saved/streamed card keeps questions and choices only. The card grades each pick through a server action (`quiz_answers`), resumes after reload, and ends with Finish or Exit; ending sends a learner message whose results the server rebuilds from the database, and the tutor reviews (misses and skips explained, takeaways if all right). The main chat is blocked (client and server) while a quiz is active; threads are not
 - [ ] `/create-study-guide` (reaches the tutor as plain text for now)
 - [ ] Quiz: other answer types (free text graded by the model); a check on the model's answer key (or a "this answer is wrong" button); rate limit /quiz-me
-- [ ] Push the `quizzes`, `plans`, `session_modes` and `plan_materials` migrations to hosted (`pnpm db:push`); create the hosted `materials` bucket (`supabase seed buckets --linked`); set `SUPABASE_SECRET_KEY` there
+- [x] Push the `quizzes`, `plans`, `session_modes` and `plan_materials` migrations to hosted (`pnpm db:push`); create the hosted `materials` bucket (`supabase seed buckets --linked`); set `SUPABASE_SECRET_KEY` there
 - [x] New chats are saved on the first message: they open at their real `/c/{id}` straight away (`/new` redirects to a fresh id; the plan hub navigates there with its first message in memory), so every link, Back and Forward is a real navigation; backing out of an empty chat leaves no row
 - [x] One top bar on every page, from the root layout's `@crumbs` slot (server-rendered with the page, so no flash): funlern / plan / page. A chat's title in it follows the generated title and renames in place; the old per-page "← All plans" back links are gone
 - [x] Tutor copy button shows on hover (always on touch); scroll-to-bottom arrow fades in and out (200ms)
 - [x] Model picker under the chat bar: Haiku 5.5 / Sonnet 5.5, saved in a cookie that the main and thread routes read
 - [x] Reply hardening: learner message saved before the model call; reply saved from the server's own stream copy (survives dropped connections); finish reason in `metadata`; cut-off/error notice with Retry; retries replace instead of duplicating
-- [ ] Push `threads_folding` and `message_metadata` migrations to hosted (`pnpm db:push`)
+- [x] Push `threads_folding` and `message_metadata` migrations to hosted (`pnpm db:push`)
 - [ ] Resumable streams (reconnect to an in-flight reply after reload); mid-stream provider retries (`streamRetries`)
 - [x] Prompt and tool registry scaffold
 - [ ] Tool-call repair
@@ -272,8 +273,8 @@ What to borrow (MIT code can be copied with its license notice):
 - [ ] `quiz` tool, card and `quiz_attempts`
 - [ ] Quiz cadence setting and thread-question hints
 - [ ] XP and streak display
-- [ ] Hosted sign-in email: Resend SMTP, then `supabase config push`
-- [ ] Deploy to Vercel (pooler `DATABASE_URL`, production site URL)
+- [x] Hosted sign-in email: Resend SMTP from `no-reply@funlern.io` (domain verified), pushed with `supabase config push`
+- [x] Deploy to Vercel (pooler `DATABASE_URL`, production site URL): live at https://www.funlern.io and https://funlern.vercel.app (2026-10-22)
 
 ## Context management
 
