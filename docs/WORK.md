@@ -252,8 +252,9 @@ What to borrow (MIT code can be copied with its license notice):
 - [ ] `ask_user` tool and card
 - [x] Plan creation: animated rainbow border around the Creating button while pending, with reduced-motion support; `/scratch/plan-loading` previews it without creating plans.
 - [ ] Context compaction (rolling summary)
-- [x] Conversation header: click the title to edit it; the menu icon opens a left drawer with Profile (not built yet) and Log out
+- [x] Conversation header: click the title to edit it; the menu icon opens a left drawer with Profile and Log out
 - [x] Names: a new sign-up gives a name on `/welcome` before anything else (home sends anyone without one there); accounts from before go by their email; home greets the learner with "Hi, {name}"
+- [x] Profile page at `/profile`, from the menu drawer: change your name; your email is shown but can't be changed yet
 - [x] Security fixes before going public: Next 16.4.2 (16.3.8 had two unauthenticated RCE advisories and a Server Actions DoS); headers that stop framing and images from other hosts (a prompt-injected image could carry chat text away); `createThread` saves only validated fields. Message-id ownership, AI request limits, database TLS and preview isolation are in PR #17
 - [x] Generated conversation titles: Haiku names the conversation from its first message, alongside the reply; a rename wins
 - [x] Slash-command menu in the main composer: `/` lists Quiz Me and Create Study Guide, filters on label or command, picking fills `/name ` (server doesn't run them yet)

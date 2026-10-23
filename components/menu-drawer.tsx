@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useRef } from 'react'
 import { signOut } from '@/app/actions'
 
@@ -29,7 +30,7 @@ export function MenuDrawer() {
               <SidebarIcon />
             </button>
           </div>
-          <span className="rounded-lg px-2 py-1.5 text-muted">Profile</span>
+          <Link href="/profile" onClick={() => ref.current?.close()} className="rounded-lg px-2 py-1.5 hover:bg-tutor">Profile</Link>
           <form action={signOut} className="mt-auto">
             <button type="submit" className="w-full rounded-lg px-2 py-1.5 text-left hover:bg-tutor">Log out</button>
           </form>
