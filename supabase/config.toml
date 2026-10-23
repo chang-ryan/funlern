@@ -250,6 +250,12 @@ otp_expiry = 3600
 subject = "Your funlern sign-in code"
 content_path = "./supabase/templates/magic_link.html"
 
+# A first-time OTP login sends the signup confirmation email instead of magic_link.
+# Both must use the app's server-side token exchange and include the code.
+[auth.email.template.confirmation]
+subject = "Your funlern sign-in code"
+content_path = "./supabase/templates/magic_link.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"
@@ -424,14 +430,21 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 [remotes.production]
 project_id = "zlncroyozoixgobiwuxg"
 
+[remotes.production.auth]
+site_url = "https://funlern.io"
+additional_redirect_urls = ["https://funlern.io/auth/confirm"]
+
+[remotes.production.auth.email]
+enable_confirmations = true
+
 [remotes.production.auth.email.smtp]
 enabled = true
 host = "smtp.resend.com"
 port = 465
 user = "resend"
 pass = "env(RESEND_API_KEY)"
-# Without a verified domain, Resend only delivers from this address to the account owner's email.
-admin_email = "onboarding@resend.dev"
+# funlern.io is verified in Resend, so mail reaches any address.
+admin_email = "no-reply@funlern.io"
 sender_name = "funlern"
 
 [remotes.production.auth.rate_limit]
