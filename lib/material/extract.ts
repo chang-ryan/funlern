@@ -34,5 +34,7 @@ export async function extractPdf(bytes: Uint8Array, beforeTranscription: () => P
     ] }],
     providerOptions: NO_THINKING,
   })
+  if (result.finishReason === 'length')
+    throw new ExtractError('That scan is too long to transcribe in one upload. Split it into smaller files.')
   return { text: result.text.trim(), pages: totalPages, transcribed: true }
 }

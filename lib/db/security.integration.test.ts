@@ -42,15 +42,15 @@ describe.skipIf(!connection)('database security regressions', () => {
     await client.end()
   })
 
-
   it.each(['main', 'thread'] as const)('refuses a foreign message ID in %s while allowing a retry in its original parent', async (kind) => {
     const save = kind === 'main' ? queries.saveMessages : queries.saveThreadMessages
     const victimParent = randomUUID()
     const attackerParent = randomUUID()
     const original = { id: randomUUID(), role: 'user' as const, parts: [{ type: 'text' as const, text: 'Original private message' }] }
     await save(victimParent, [original])
-    await expect(save(attackerParent, [{ ...original, parts: [{ type: 'text', text: 'Forged overwrite' }] }])).rejects.toThrow('already in use')
+    await expect(save(attackerParent, [{ ...original, id: randomUUID() }, { ...original, parts: [{ type: 'text', text: 'Forged overwrite' }] }])).rejects.toThrow('already in use')
     const rows = kind === 'main' ? await client`select parts from messages` : await client`select parts from thread_messages`
+    expect(rows).toHaveLength(1) // The failed batch must not partially save the new message either.
     expect(rows[0].parts).toEqual(original.parts)
     await save(victimParent, [{ ...original, parts: [{ type: 'text', text: 'Legitimate retry' }] }])
     const retried = kind === 'main' ? await client`select parts from messages` : await client`select parts from thread_messages`

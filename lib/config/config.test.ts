@@ -7,15 +7,19 @@ describe('database transport', () => {
   it('overrides insecure URL options for hosted connections', async () => {
     const url = 'postgres://user:example@db.example.com:6543/postgres?sslmode=disable'
     const client = postgres(url, databaseOptions(url))
-    expect(client.options.ssl).toBe('verify-full')
+    expect(client.options.ssl).toEqual({ rejectUnauthorized: true })
     expect(client.options.prepare).toBe(false)
     expect(client.options.max).toBe(3)
     await client.end()
   })
+  it('accepts a dashboard CA certificate without disabling verification', () => {
+    expect(databaseOptions('postgres://user:example@db.example.com/postgres', 'certificate\\nlines').ssl)
+      .toEqual({ rejectUnauthorized: true, ca: 'certificate\nlines' })
+  })
   it('keeps local Supabase usable without TLS', () => {
     for (const host of ['localhost', '127.0.0.1', '[::1]'])
       expect(databaseOptions(`postgres://user:example@${host}:55322/postgres`).ssl).toBe(false)
-    expect(databaseOptions('postgres://user:example@localhost.evil.example/postgres').ssl).toBe('verify-full')
+    expect(databaseOptions('postgres://user:example@localhost.evil.example/postgres').ssl).toEqual({ rejectUnauthorized: true })
   })
 })
 

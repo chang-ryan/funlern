@@ -431,8 +431,8 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 project_id = "zlncroyozoixgobiwuxg"
 
 [remotes.production.auth]
-site_url = "https://funlern.io"
-additional_redirect_urls = ["https://funlern.io/auth/confirm"]
+site_url = "https://www.funlern.io"
+additional_redirect_urls = ["https://www.funlern.io/auth/confirm", "https://funlern.io/auth/confirm", "https://funlern.vercel.app/auth/confirm"]
 
 [remotes.production.auth.email]
 enable_confirmations = true

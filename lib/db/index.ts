@@ -8,7 +8,7 @@ import 'server-only'
 // prepare: false is required for Supabase's transaction pooler.
 // Reuse one client across dev hot reloads instead of opening a new pool each time.
 const globalForDb = globalThis as unknown as { pg?: postgres.Sql }
-const client = globalForDb.pg ?? postgres(process.env.DATABASE_URL!, databaseOptions(process.env.DATABASE_URL!))
+const client = globalForDb.pg ?? postgres(process.env.DATABASE_URL!, databaseOptions(process.env.DATABASE_URL!, process.env.DATABASE_SSL_CA))
 if (process.env.NODE_ENV !== 'production')
   globalForDb.pg = client
 
