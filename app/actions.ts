@@ -3,12 +3,16 @@
 import type { Anchor } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
+import { z } from 'zod'
 import { requireUser } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { getConversation, getLatestMessageIndex, getMessage } from '@/lib/db/queries'
 import { answerQuestion, getLearnerQuiz } from '@/lib/db/quizzes'
 import { conversations, threads } from '@/lib/db/schema'
 import { createClient } from '@/lib/supabase/server'
+
+// A quote from one tutor message, with the few characters either side that lib/anchor.ts keeps.
+const anchorSchema = z.object({ quote: z.string().min(1).max(50_000), prefix: z.string().max(100), suffix: z.string().max(100) })
 
 /** Signs out of this browser and goes to the sign-in page. */
 export async function signOut() {
@@ -33,7 +37,9 @@ export async function createThread(input: { conversationId: string, anchorMessag
   if (anchorMessage?.role !== 'assistant')
     throw new Error('Threads anchor on tutor messages only')
   const snapshotIndex = await getLatestMessageIndex(input.conversationId)
-  const [row] = await db.insert(threads).values({ ...input, snapshotIndex }).returning()
+  // Only these fields: a server action takes whatever the caller sends, whatever its type says.
+  const anchor = anchorSchema.parse(input.anchor)
+  const [row] = await db.insert(threads).values({ conversationId: input.conversationId, anchorMessageId: input.anchorMessageId, anchor, snapshotIndex }).returning()
   return row
 }
 
