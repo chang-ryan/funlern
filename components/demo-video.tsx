@@ -33,7 +33,7 @@ export function DemoVideoLink({ children }: { children: React.ReactNode }) {
           <span className="font-medium">Ask in a side thread</span>
           <button type="button" aria-label="Close" onClick={() => dialogRef.current?.close()} className="rounded-lg px-2 py-1 text-muted hover:bg-tutor hover:text-foreground">×</button>
         </div>
-        <video ref={videoRef} src="/demo/ask-in-thread.mp4" poster="/demo/ask-in-thread.jpg" preload="none" controls muted playsInline loop className="block w-full" />
+        <video ref={videoRef} src="/demo/ask-in-thread.mp4" poster="/demo/ask-in-thread.jpg" preload="none" muted playsInline loop disablePictureInPicture className="block w-full" />
       </dialog>
     </>
   )
