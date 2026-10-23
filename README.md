@@ -2,6 +2,8 @@
 
 Chat UI where you highlight part of an assistant answer and ask about it in a side thread. Each thread forks the conversation context at that point.
 
+Live at [funlern.io](https://www.funlern.io) (also [funlern.vercel.app](https://funlern.vercel.app)).
+
 ## Stack
 
 Next.js (App Router) · Tailwind v4 · Vercel AI SDK · Supabase (auth via email OTP/magic link, Postgres) · Drizzle · `@antfu/eslint-config`
@@ -53,6 +55,10 @@ Drizzle owns the schema; the Supabase CLI applies migrations.
 Never edit a migration that has been applied anywhere; add a new one.
 
 Hosted connection values live in `.env.remote` (gitignored). Auth settings and the email template live in `supabase/config.toml`; push them with `supabase config push`.
+
+## Production
+
+Vercel hosts the app at https://www.funlern.io and https://funlern.vercel.app, against the hosted Supabase project. Set the app's variables (the table above, plus `NEXT_PUBLIC_SUPABASE_URL`, `DATABASE_URL` and `ANTHROPIC_MODEL`) in the Vercel project's settings with the hosted values, never `NEXT_PUBLIC_` on the secret key. Both domains need to be in the hosted project's Auth redirect URLs for sign-in links to work. Ship migrations with `pnpm db:push` before the code that needs them.
 
 ## Layout
 
