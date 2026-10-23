@@ -2,9 +2,9 @@
 
 Shared copy: https://claude.ai/code/artifact/c40870de-a8d2-482f-8c9c-b1bdfd36cc17. Keep both in sync.
 
-## Production hardening (2026-10-22, draft)
+## Production hardening (2026-10-22)
 
-Worktree: `/private/tmp/funlern-production-hardening`, branch `fix/production-hardening`, based on freshly fetched `origin/main` at `586eb48`. Draft work covers message ownership, verified database TLS, durable AI request limits, preview isolation, upload limits, and dependency monitoring. See [the rollout checklist](PRODUCTION.md). Implementation is paused for coordination with a separate pressure-testing agent. TLS still needs the Supabase CA certificate, and full smoke/build validation remains outstanding. No production configuration or data was changed. The external shared artifact has not been updated.
+PR [#17](https://github.com/chang-ryan/funlern/pull/17), worktree `/private/tmp/funlern-production-hardening`, branch `fix/production-hardening`. Rebased onto main after #18: its Next 16.4.2 upgrade, headers, and thread validation are preserved. #17 scopes message upserts to their parent with transactional rejection, verifies remote Postgres TLS using `DATABASE_SSL_CA`, adds durable AI request budgets and output caps, rejects previews pointing at production, caps uploads at 4 MiB, and adds Dependabot configuration. See [the rollout checklist](PRODUCTION.md) for the migration, certificate, preview separation, and owner settings. Local validation: lint, TypeScript, migration checks, the production build, 72 tests, and the 16-step smoke suite pass on a separate Supabase stack; a read-only hosted TLS check passed with the Supabase CA. No production configuration or records were changed. The external shared artifact has not been updated.
 
 ## Overview
 
@@ -234,7 +234,7 @@ What to borrow (MIT code can be copied with its license notice):
   - [x] 2.2 Fold `<plan_updated>` (changed sections) into the next learner message; advance `seen`
   - [x] 2.3 `update_doc` tool, chat note on each write, `toolChoice: 'auto'` in plan sessions, `ask_user` out of the tool set; `create_quiz` refuses outside /quiz-me and its calls are hidden from the stream and saved reply
 - Plans, step 3: material
-  - [x] 3.1 `plan_materials` (write-once, soft delete); private Storage for originals; upload and paste; Material page with the "what goes here" copy; caps of 5 files, 10MB per file and ~30k tokens (no page limit; transcription up to 100 pages)
+  - [x] 3.1 `plan_materials` (write-once, soft delete); private Storage for originals; upload and paste; Material page with the "what goes here" copy; caps of 5 files, 4 MiB per file and ~30k tokens (no page limit; transcription up to 100 pages)
   - [x] 3.2 Extraction once at upload: pdf.js text layer, one-time Claude transcription when any page has no text; preview and token count
   - [x] 3.3 Material in the system prompt, pinned per session; additions and removals fold into the next learner message
   - [x] 3.4 Material in the wizard: files and pasted text are uploaded to the new plan before drafting, so the first syllabus follows the material and cites it; files that can't be added are listed, and the plan is created anyway
