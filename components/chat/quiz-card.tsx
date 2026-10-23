@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react'
 import type { LearnerQuiz } from '@/lib/db/quizzes'
 import type { QuizEnd } from '@/lib/quiz'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { answerQuiz, getQuiz } from '@/app/actions'
 import { tallyText } from '@/lib/quiz'
 
@@ -13,7 +13,8 @@ const LETTERS = ['A', 'B', 'C', 'D']
 
 /**
  * A quiz the tutor wrote. The quiz lives in the database: each pick is graded by the server, which then
- * reveals the answer and explanation. Finishing or exiting sends the results to the tutor (`onEnd`).
+ * reveals the answer and explanation. Answering the last question finishes the quiz, and exiting ends it early;
+ * either sends the results to the tutor (`onEnd`).
  * `phase` comes from the conversation: 'ending' while the results are on their way, 'ended' after.
  */
 export function QuizCard({ quizId, phase, onEnd }: {
@@ -27,6 +28,17 @@ export function QuizCard({ quizId, phase, onEnd }: {
   const [failed, setFailed] = useState<string | null>(null)
   const [at, setAt] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
+
+  // The last answer finishes the quiz; there is no Finish button. This also ends a quiz answered in full whose
+  // results never went out (a reload in between). Once only: `onEnd` is a new function on every render.
+  const complete = quiz?.status === 'active' && quiz.questions.every(x => x.picked !== null)
+  const sentRef = useRef(false)
+  useEffect(() => {
+    if (complete && phase === 'active' && onEnd && !sentRef.current) {
+      sentRef.current = true
+      onEnd('completed')
+    }
+  }, [complete, phase, onEnd])
 
   // Load on mount, and again once the quiz has ended, to show every answer.
   useEffect(() => {
@@ -56,7 +68,6 @@ export function QuizCard({ quizId, phase, onEnd }: {
   const index = at ?? Math.max(0, questions.findIndex(q => q.picked === null))
   const q = questions[index]
   const answered = q.picked !== null
-  const allAnswered = questions.every(x => x.picked !== null)
 
   async function pick(choice: number) {
     // Stay on this question to show the feedback; otherwise "first unanswered" would move on at once.
@@ -114,17 +125,11 @@ export function QuizCard({ quizId, phase, onEnd }: {
             <span className={`font-medium ${q.picked === q.answer ? 'text-correct' : 'text-incorrect'}`}>{q.picked === q.answer ? 'Right. ' : 'Not quite. '}</span>
             <Inline text={q.explanation ?? ''} />
           </p>
-          {allAnswered
-            ? (
-                <button type="button" disabled={!onEnd} onClick={() => onEnd?.('completed')} className="self-end rounded-lg bg-student px-3 py-1.5 text-sm font-medium text-student-foreground disabled:opacity-50">
-                  Finish quiz
-                </button>
-              )
-            : (
-                <button type="button" onClick={() => setAt(nextUnanswered(questions, index))} className="self-end rounded-lg bg-student px-3 py-1.5 text-sm font-medium text-student-foreground">
-                  Next question
-                </button>
-              )}
+          {!complete && (
+            <button type="button" onClick={() => setAt(nextUnanswered(questions, index))} className="self-end rounded-lg bg-student px-3 py-1.5 text-sm font-medium text-student-foreground">
+              Next question
+            </button>
+          )}
         </div>
       )}
     </Frame>
@@ -143,23 +148,34 @@ function Results({ quiz }: { quiz: LearnerQuiz }) {
               <span className={`mt-px w-3 shrink-0 font-semibold ${outcome === 'right' ? 'text-correct' : outcome === 'wrong' ? 'text-incorrect' : 'text-muted'}`} aria-label={outcome}>
                 {outcome === 'right' ? '✓' : outcome === 'wrong' ? '✗' : '–'}
               </span>
-              <div className="min-w-0">
+              <div className="flex min-w-0 flex-col gap-0.5">
                 <p><Inline text={q.question} /></p>
-                {outcome !== 'right' && q.answer !== undefined && (
-                  <p className="mt-0.5 text-muted">
-                    {outcome === 'skipped'
-                      ? 'Skipped. '
-                      : (
-                          <>
-                            {'You picked '}
-                            <Inline text={q.choices[q.picked!]} />
-                            {'. '}
-                          </>
-                        )}
-                    {'Answer: '}
-                    <Inline text={q.choices[q.answer]} />
+                {q.answer !== undefined && (
+                  <p className="text-muted">
+                    {outcome === 'right' && (
+                      <>
+                        {'Your answer: '}
+                        <Inline text={q.choices[q.answer]} />
+                      </>
+                    )}
+                    {outcome === 'wrong' && (
+                      <>
+                        {'You picked '}
+                        <Inline text={q.choices[q.picked!]} />
+                        {'. Answer: '}
+                        <Inline text={q.choices[q.answer]} />
+                      </>
+                    )}
+                    {outcome === 'skipped' && (
+                      <>
+                        {'Skipped. Answer: '}
+                        <Inline text={q.choices[q.answer]} />
+                      </>
+                    )}
                   </p>
                 )}
+                {/* The last answer ends the quiz before its feedback shows, so answered questions keep theirs here. */}
+                {q.picked !== null && q.explanation && <p className="text-muted"><Inline text={q.explanation} /></p>}
               </div>
             </li>
           )
