@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { DemoVideoLink } from '@/components/demo-video'
 import { SessionList } from '@/components/plan/session-list'
 import { getPlans, getUncategorized } from '@/lib/db/plans'
 import { getDisplayName } from '@/lib/db/profiles'
@@ -17,7 +18,16 @@ export default async function Home() {
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 overflow-y-auto px-4 py-8">
-      <h1 className="truncate text-2xl font-semibold tracking-tight">{`Hi, ${name}`}</h1>
+      <header className="flex flex-col gap-1">
+        <h1 className="truncate text-2xl font-semibold tracking-tight">{`Hi, ${name}`}</h1>
+        {/* A div, not a p: the link carries its modal, and a dialog can't sit inside a paragraph. */}
+        <div className="text-sm text-muted">
+          Welcome to funlern, home of the world's first ask-in-side-thread agentic chat. See how it works
+          {' '}
+          <DemoVideoLink>here</DemoVideoLink>
+          .
+        </div>
+      </header>
       <section aria-labelledby="plans" className="flex flex-col gap-2">
         <header className="flex items-center justify-between">
           <h2 id="plans" className="text-sm font-medium text-muted">Plans</h2>
