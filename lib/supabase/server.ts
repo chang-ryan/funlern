@@ -28,3 +28,10 @@ export async function getUserId() {
   const { data } = await supabase.auth.getClaims()
   return data?.claims.sub ?? null
 }
+
+/** The signed-in user's id and email, or null. */
+export async function getUserIdentity() {
+  const supabase = await createClient()
+  const { data } = await supabase.auth.getClaims()
+  return data ? { id: data.claims.sub, email: data.claims.email ?? null } : null
+}
