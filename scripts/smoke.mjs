@@ -11,9 +11,13 @@ const echoed = raw => textOf(raw)
 
 await asLearner(APP, 'smoke', async ({ userId, cookie, send, post, addMaterial }) => {
   assert.equal(await count(sql`select count(*)::int from profiles where id = ${userId}`), 1, 'signup trigger created a profile')
+  const home = () => fetch(`${APP}/`, { headers: { cookie }, redirect: 'manual' })
+  assert.equal(new URL((await home()).headers.get('location') ?? '/', APP).pathname, '/welcome', 'a new sign-up is asked for a name first')
+  await sql`update profiles set display_name = 'Smoke' where id = ${userId}`
+  assert.match(await (await home()).text(), /Hi, Smoke/, 'home greets the learner by name')
   const probe = await post('/api/chat', { id: crypto.randomUUID(), message: say('[mock:echo]') })
   assert.ok(echoed(probe).startsWith('['), `the app at ${APP} isn't running the scripted model: start it with pnpm dev:mock`)
-  step('sign in', 'code from Mailpit, profile created, scripted model answering')
+  step('sign in', 'code from Mailpit, profile created, name asked for, scripted model answering')
 
   // A new chat has no row until its first message; the chat route creates it and titles it.
   const c = { id: crypto.randomUUID() }

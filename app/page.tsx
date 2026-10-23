@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { SessionList } from '@/components/plan/session-list'
 import { getPlans, getUncategorized } from '@/lib/db/plans'
+import { getDisplayName } from '@/lib/db/profiles'
 import { planDescription } from '@/lib/plans/docs'
 import { getUserId } from '@/lib/supabase/server'
 
@@ -9,10 +10,14 @@ export default async function Home() {
   const userId = await getUserId()
   if (!userId)
     redirect('/login')
-  const [plans, uncategorized] = await Promise.all([getPlans(userId), getUncategorized(userId)])
+  const [name, plans, uncategorized] = await Promise.all([getDisplayName(userId), getPlans(userId), getUncategorized(userId)])
+  // A new sign-up gives a name before anything else.
+  if (!name)
+    redirect('/welcome')
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 overflow-y-auto px-4 py-8">
+      <h1 className="truncate text-2xl font-semibold tracking-tight">{`Hi, ${name}`}</h1>
       <section aria-labelledby="plans" className="flex flex-col gap-2">
         <header className="flex items-center justify-between">
           <h2 id="plans" className="text-sm font-medium text-muted">Plans</h2>
