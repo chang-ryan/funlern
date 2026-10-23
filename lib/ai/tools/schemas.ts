@@ -23,11 +23,13 @@ export const askUser = tool({
   }),
 })
 
+// Caps are generous backstops, not targets: an input over any of them rejects the whole quiz, and the learner
+// gets "couldn't write a quiz". The descriptions ask for the lengths the card is designed around.
 const quizQuestion = z.object({
-  question: z.string().max(300),
-  choices: z.array(z.string().max(120)).length(4).describe('Four answer choices'),
+  question: z.string().max(600).describe('One or two sentences'),
+  choices: z.array(z.string().max(240)).length(4).describe('Four answer choices, a short phrase each'),
   answer: z.number().int().min(0).max(3).describe('Index of the correct choice'),
-  explanation: z.string().max(400).describe('Why the correct choice is right; shown after the learner answers'),
+  explanation: z.string().max(1200).describe('Why the correct choice is right, in two or three sentences; shown after the learner answers'),
 })
 
 /**
@@ -37,7 +39,7 @@ const quizQuestion = z.object({
 export const createQuiz = tool({
   description: 'Write a multiple-choice quiz on what you have covered with the learner: 1 to 5 questions, four choices each, one correct. Test understanding, not recall of wording. Plain text; use `backticks` for code.',
   inputSchema: z.object({
-    title: z.string().max(80).describe('Short topic, e.g. "JavaScript closures"'),
+    title: z.string().max(120).describe('Short topic, e.g. "JavaScript closures"'),
     questions: z.array(quizQuestion).min(1).max(5),
   }),
   outputSchema: z.object({

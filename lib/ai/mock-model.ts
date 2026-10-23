@@ -6,7 +6,7 @@ import 'server-only'
  * A scripted model for the smoke test (MOCK_MODEL=1). It answers by what the request asks for, never by
  * meaning, so the test checks what the server sends and saves rather than what a model says:
  * - a structured output (plan draft, title) gets valid JSON for its schema;
- * - a forced create_quiz gets a fixed two-question quiz;
+ * - a forced create_quiz gets a fixed two-question quiz, or one over the schema's caps for `[mock:bad-quiz]`;
  * - a PDF gets a one-page transcription;
  * - each `[mock:tool NAME {json}]` in the learner's message calls that tool, then it replies "done" after the results;
  * - `[mock:echo]` replies with the whole request as the model saw it (system prompt and messages), so the
@@ -35,6 +35,9 @@ const QUIZ = {
   ],
 }
 
+// An explanation over create_quiz's cap, so the server's rejection (and its log line) can be tested.
+const BAD_QUIZ = { ...QUIZ, questions: [{ ...QUIZ.questions[0], explanation: 'x'.repeat(2000) }] }
+
 function finish(content: LanguageModelV4Content[]) {
   const toolCall = content.some(c => c.type === 'tool-call')
   return { content, usage: USAGE, finishReason: { unified: toolCall ? 'tool-calls' as const : 'stop' as const, raw: undefined } }
@@ -47,10 +50,10 @@ function respond(options: LanguageModelV4CallOptions): LanguageModelV4Content[] 
   const { prompt, responseFormat, toolChoice } = options
   if (responseFormat?.type === 'json')
     return text(JSON.stringify(jsonFor(responseFormat.schema)))
-  if (toolChoice?.type === 'tool' && toolChoice.toolName === 'create_quiz')
-    return call('create_quiz', QUIZ)
-
   const last = prompt.at(-1)
+  if (toolChoice?.type === 'tool' && toolChoice.toolName === 'create_quiz')
+    return call('create_quiz', JSON.stringify(last?.content ?? '').includes('[mock:bad-quiz]') ? BAD_QUIZ : QUIZ)
+
   // After a tool result the model goes on; one short line is enough.
   if (last?.role === 'tool')
     return text('done')

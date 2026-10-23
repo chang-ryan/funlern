@@ -22,6 +22,7 @@ import { foldMaterialUpdates } from '@/lib/db/materials'
 import { foldPlanUpdates, setSeen } from '@/lib/db/plans'
 import { deleteMessagesFrom, getMessages, getOrStartConversation, getThreadsWithMessages, saveMessages, setFoldedThrough } from '@/lib/db/queries'
 import { endQuiz, exitActiveQuizzes, getActiveQuizId, getLearnerQuiz } from '@/lib/db/quizzes'
+import { logError, logToolErrors } from '@/lib/log'
 import { stampSent, textOf, TITLE_PART } from '@/lib/messages'
 import { PLAN_UPDATED } from '@/lib/plans/updates'
 import { QUIZ_PART, QUIZ_RESULTS, quizIdOf, quizResultsOf } from '@/lib/quiz'
@@ -135,8 +136,9 @@ async function reply(ctx: Ctx, messages: UIMessage[]) {
     // A tool call (update_doc) is a step; the tutor goes on writing after it.
     stopWhen: stepCountIs(4),
     messages: markCacheBreakpoint(modelMessages, modelMessages.length - 1),
+    onStepFinish: logToolErrors({ route: 'chat', conversationId: ctx.conversationId }),
   })
-  const replyId = saveReplyWhenDone(result.stream, r => saveMessages(ctx.conversationId, [...messages, r]))
+  const replyId = saveReplyWhenDone(result.stream, r => saveMessages(ctx.conversationId, [...messages, r]), { route: 'chat', conversationId: ctx.conversationId })
 
   return respond(ctx, messages, replyId, (writer) => {
     writer.merge(hideTools(toUIMessageStream({ stream: result.stream, sendStart: false, messageMetadata: finishMetadata })))
@@ -164,8 +166,13 @@ async function quizReply(ctx: Ctx, messages: UIMessage[]) {
     })
     const call = result.toolCalls.find(c => c.toolName === 'create_quiz')
     const saved = result.toolResults.find(r => r.toolName === 'create_quiz')
-    if (!call || !saved)
+    if (!call || !saved) {
+      // The learner sees a generic retry; the log says why: a rejected input (which field, what rule), a failed
+      // save, or no call at all.
+      const failures = result.content.flatMap(p => p.type === 'tool-error' ? [p.error] : [])
+      logError('quiz failed', failures[0] ?? new Error('No create_quiz result'), { conversationId: ctx.conversationId, finishReason: result.finishReason, calls: result.toolCalls.map(c => c.toolName), toolErrors: failures.length })
       throw new Error('The tutor couldn\'t write a quiz. Try again.')
+    }
 
     // The card keeps only questions and choices, in the shuffled order the quiz was saved in.
     const quiz = await getLearnerQuiz(ctx.userId, (saved.output as { quizId: string }).quizId)
@@ -204,7 +211,10 @@ function respond(ctx: Ctx, messages: UIMessage[], replyId: string, body: (writer
       if (title)
         writer.write({ type: TITLE_PART, data: title, transient: true })
     },
-    onError: error => error instanceof Error ? error.message : 'Something went wrong.',
+    onError: (error) => {
+      logError('chat reply failed', error, { conversationId: ctx.conversationId })
+      return error instanceof Error ? error.message : 'Something went wrong.'
+    },
   })
   return createUIMessageStreamResponse({ stream })
 }
