@@ -13,3 +13,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Actions are pinned to commit SHAs (version in a comment); bump them together in one PR.
+    groups:
+      actions:
+        patterns: ['*']
