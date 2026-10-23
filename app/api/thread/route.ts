@@ -13,6 +13,7 @@ import { placeTurn } from '@/lib/ai/turn'
 import { errorResponse, NOT_FOUND, UNAUTHORIZED } from '@/lib/auth'
 import { aiLimitResponse, reserveAiRequest } from '@/lib/db/ai-usage'
 import { deleteThreadMessagesFrom, getConversation, getMessages, getThread, getThreadMessages, saveThreadMessages } from '@/lib/db/queries'
+import { logToolErrors } from '@/lib/log'
 import { stampSent, textOf } from '@/lib/messages'
 import { getUserId } from '@/lib/supabase/server'
 
@@ -60,8 +61,9 @@ export async function POST(req: Request) {
     stopWhen: stepCountIs(4),
     // Breakpoint 1 reuses main's cache; breakpoint 2 caches this thread for its next reply.
     messages: markCacheBreakpoint(markCacheBreakpoint([...prefix, ...own], prefix.length - 1), prefix.length + own.length - 1),
+    onStepFinish: logToolErrors({ route: 'thread', threadId: id }),
   })
-  const replyId = saveReplyWhenDone(result.stream, reply => saveThreadMessages(id, [...threadMessages, reply]))
+  const replyId = saveReplyWhenDone(result.stream, reply => saveThreadMessages(id, [...threadMessages, reply]), { route: 'thread', threadId: id })
 
   return createUIMessageStreamResponse({
     stream: hideTools(toUIMessageStream({

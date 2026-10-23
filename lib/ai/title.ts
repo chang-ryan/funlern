@@ -1,6 +1,7 @@
 import { generateText, Output } from 'ai'
 import { z } from 'zod'
 import { setGeneratedTitle } from '@/lib/db/queries'
+import { logError } from '@/lib/log'
 import { NO_THINKING, taskModel } from './model'
 import { titlePrompt } from './prompts/tasks/title'
 import 'server-only'
@@ -22,7 +23,7 @@ export async function titleConversation(conversationId: string, question: string
     return title && await setGeneratedTitle(conversationId, title) ? title : null
   }
   catch (error) {
-    console.error('title failed', error)
+    logError('title failed', error, { conversationId })
     return null
   }
 }

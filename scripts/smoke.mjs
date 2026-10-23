@@ -67,6 +67,13 @@ await asLearner(APP, 'smoke', async ({ userId, cookie, send, post, addMaterial }
   assert.deepEqual((await sql`select role from messages where conversation_id = ${d.id} order by index`).map(r => r.role), ['user', 'assistant'])
   step('retry', 'resent question replaced its reply instead of duplicating')
 
+  // A quiz the model writes over create_quiz's caps is refused with a retry message, and nothing is saved.
+  const bad = { id: crypto.randomUUID() }
+  await post('/api/chat', { id: bad.id, message: say('Teach me closures') })
+  assert.match(await post('/api/chat', { id: bad.id, message: say('/quiz-me [mock:bad-quiz]') }), /couldn't write a quiz/)
+  assert.equal(await count(sql`select count(*)::int from quizzes where conversation_id = ${bad.id}`), 0)
+  step('bad quiz', 'a quiz over the caps is refused with a retry message; nothing saved')
+
   const qz = { id: crypto.randomUUID() }
   await post('/api/chat', { id: qz.id, message: say('Teach me closures') })
   await post('/api/chat', { id: qz.id, message: say('/quiz-me') })
