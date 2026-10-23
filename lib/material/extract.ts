@@ -16,7 +16,7 @@ export class ExtractError extends Error {}
  * exact and free; a PDF with any page that has none goes to Claude once to be transcribed whole, up to the
  * pages Claude reads in one request.
  */
-export async function extractPdf(bytes: Uint8Array): Promise<{ text: string, pages: number, transcribed: boolean }> {
+export async function extractPdf(bytes: Uint8Array, beforeTranscription: () => Promise<void>): Promise<{ text: string, pages: number, transcribed: boolean }> {
   const pdf = await getDocumentProxy(bytes.slice())
   const { totalPages, text } = await extractText(pdf, { mergePages: false })
   if (text.every(page => page.trim().length >= SPARSE_PAGE))
@@ -24,7 +24,9 @@ export async function extractPdf(bytes: Uint8Array): Promise<{ text: string, pag
   if (totalPages > MATERIAL_LIMITS.transcribePages)
     throw new ExtractError(`Some pages of this PDF have no text (scans or images), and transcribing is limited to ${MATERIAL_LIMITS.transcribePages} pages; this one has ${totalPages}.`)
 
+  await beforeTranscription()
   const result = await generateText({
+    maxOutputTokens: 8192,
     model: taskModel(),
     messages: [{ role: 'user', content: [
       { type: 'file', data: bytes, mediaType: 'application/pdf' },

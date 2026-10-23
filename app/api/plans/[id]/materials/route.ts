@@ -1,6 +1,7 @@
 import type { MaterialKind } from '@/lib/plans/material'
 import { revalidatePath } from 'next/cache'
 import { errorResponse, NOT_FOUND, UNAUTHORIZED } from '@/lib/auth'
+import { aiLimitResponse, reserveAiRequest } from '@/lib/db/ai-usage'
 import { getActiveMaterials, insertMaterial } from '@/lib/db/materials'
 import { getPlan } from '@/lib/db/plans'
 import { ExtractError, extractPdf } from '@/lib/material/extract'
@@ -56,10 +57,17 @@ export async function POST(req: Request, { params }: RouteContext<'/api/plans/[i
     const full = materialRefusal(current, { tokens: 0 })
     if (full)
       return refuse(full)
+    let limit: Awaited<ReturnType<typeof reserveAiRequest>> = null
     try {
-      ({ text, pages } = await extractPdf(bytes))
+      ({ text, pages } = await extractPdf(bytes, async () => {
+        limit = await reserveAiRequest(userId)
+        if (limit)
+          throw new Error('AI limit reached')
+      }))
     }
     catch (error) {
+      if (limit)
+        return aiLimitResponse(limit)
       return refuse(error instanceof ExtractError ? error.message : 'That PDF couldn\'t be read.', error instanceof ExtractError ? 422 : 400)
     }
   }

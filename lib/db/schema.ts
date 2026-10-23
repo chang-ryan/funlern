@@ -1,7 +1,7 @@
 import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import type { DocKind } from '@/lib/plans/docs'
 import { sql } from 'drizzle-orm'
-import { boolean, index, integer, jsonb, pgEnum, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { boolean, index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { authUsers } from 'drizzle-orm/supabase'
 import { DOC_KINDS } from '@/lib/plans/docs'
 import { MATERIAL_KINDS } from '@/lib/plans/material'
@@ -239,3 +239,11 @@ export const quizAnswers = pgTable('quiz_answers', {
   correct: boolean().notNull(),
   ...timestamps,
 }).enableRLS()
+
+// Shared request budgets for all paid AI entry points. No Data API access.
+export const aiUsage = pgTable('ai_usage', {
+  scope: text().notNull(),
+  windowStart: timestamp({ withTimezone: true }).notNull(),
+  userId: uuid().references(() => profiles.id, { onDelete: 'cascade' }),
+  requests: integer().notNull(),
+}, t => [primaryKey({ columns: [t.scope, t.windowStart] })]).enableRLS()

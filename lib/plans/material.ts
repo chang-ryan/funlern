@@ -5,7 +5,8 @@ export type MaterialKind = (typeof MATERIAL_KINDS)[number]
 
 // All of a plan's material goes in the system prompt, so its text is capped small enough to always fit. A PDF
 // with no text layer is transcribed by Claude, which reads at most 100 pages in one request.
-export const MATERIAL_LIMITS = { files: 5, tokens: 30_000, bytes: 10 * 1024 * 1024, transcribePages: 100 }
+// Leave room for multipart overhead under Vercel's 4.5 MB request limit.
+export const MATERIAL_LIMITS = { files: 5, tokens: 30_000, bytes: 4 * 1024 * 1024, transcribePages: 100 }
 
 /** Rough token count for English prose and code; close enough for a cap. */
 export function estimateTokens(text: string) {

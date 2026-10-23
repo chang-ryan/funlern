@@ -13,6 +13,7 @@ export async function titleConversation(conversationId: string, question: string
   try {
     const { output } = await generateText({
       model: taskModel(),
+      maxOutputTokens: 128,
       output: Output.object({ schema: z.object({ title: z.string() }) }),
       prompt: titlePrompt(question.slice(0, 2000)),
       providerOptions: NO_THINKING,

@@ -1,5 +1,6 @@
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
+import { databaseOptions } from '@/lib/config/database'
 import * as schema from './schema'
 import 'server-only'
 
@@ -7,7 +8,7 @@ import 'server-only'
 // prepare: false is required for Supabase's transaction pooler.
 // Reuse one client across dev hot reloads instead of opening a new pool each time.
 const globalForDb = globalThis as unknown as { pg?: postgres.Sql }
-const client = globalForDb.pg ?? postgres(process.env.DATABASE_URL!, { prepare: false })
+const client = globalForDb.pg ?? postgres(process.env.DATABASE_URL!, databaseOptions(process.env.DATABASE_URL!))
 if (process.env.NODE_ENV !== 'production')
   globalForDb.pg = client
 

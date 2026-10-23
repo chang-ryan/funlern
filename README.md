@@ -58,7 +58,9 @@ Hosted connection values live in `.env.remote` (gitignored). Auth settings and t
 
 ## Production
 
-Vercel hosts the app at https://www.funlern.io and https://funlern.vercel.app, against the hosted Supabase project. Set the app's variables (the table above, plus `NEXT_PUBLIC_SUPABASE_URL`, `DATABASE_URL` and `ANTHROPIC_MODEL`) in the Vercel project's settings with the hosted values, never `NEXT_PUBLIC_` on the secret key. Both domains need to be in the hosted project's Auth redirect URLs for sign-in links to work. Ship migrations with `pnpm db:push` before the code that needs them.
+Vercel hosts the app at https://www.funlern.io and https://funlern.vercel.app, against the hosted Supabase project. Set the app's variables (the table above, plus `NEXT_PUBLIC_SUPABASE_URL`, `DATABASE_URL` and `ANTHROPIC_MODEL`) in the Vercel project's settings with the hosted values, never `NEXT_PUBLIC_` on the secret key. Use the canonical `https://www.funlern.io` Site URL and allow each supported domain's `/auth/confirm` callback in Supabase. Ship migrations with `pnpm db:push` before the code that needs them.
+
+See [the production checklist](docs/PRODUCTION.md) for rollout order, separate preview credentials, TLS, usage limits, and security settings. Preview builds reject this app's production Supabase project. Files are capped at 4 MiB to fit Vercel's request limit. Remote Postgres connections verify TLS certificates; local loopback connections remain plain TCP.
 
 ## Layout
 

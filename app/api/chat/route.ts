@@ -8,6 +8,7 @@ import { isAddedPart } from '@/lib/added-parts'
 import { markCacheBreakpoint } from '@/lib/ai/cache'
 import { parseCommand } from '@/lib/ai/commands'
 import { hideTools } from '@/lib/ai/hide-tools'
+import { AI_OUTPUT_TOKENS } from '@/lib/ai/limits'
 import { toModelMessages } from '@/lib/ai/messages'
 import { currentModel, NO_THINKING } from '@/lib/ai/model'
 import { finishMetadata, saveReplyWhenDone } from '@/lib/ai/reply'
@@ -16,6 +17,7 @@ import { titleConversation } from '@/lib/ai/title'
 import { toolChoiceFor, toolsFor } from '@/lib/ai/tools'
 import { placeTurn } from '@/lib/ai/turn'
 import { errorResponse, NOT_FOUND, UNAUTHORIZED } from '@/lib/auth'
+import { aiLimitResponse, reserveAiRequest } from '@/lib/db/ai-usage'
 import { foldMaterialUpdates } from '@/lib/db/materials'
 import { foldPlanUpdates, setSeen } from '@/lib/db/plans'
 import { deleteMessagesFrom, getMessages, getOrStartConversation, getThreadsWithMessages, saveMessages, setFoldedThrough } from '@/lib/db/queries'
@@ -79,6 +81,10 @@ export async function POST(req: Request) {
 
   const messages = await validateUIMessages({ messages: [...turn.history, outgoing] })
 
+  const limit = await reserveAiRequest(userId)
+  if (limit)
+    return aiLimitResponse(limit)
+
   // Save the learner's message before calling the model, so a failed or dropped reply never loses it.
   if (turn.retry)
     await deleteMessagesFrom(id, turn.dropFrom)
@@ -119,6 +125,7 @@ async function reply(ctx: Ctx, messages: UIMessage[]) {
   const modelMessages = await toModelMessages(messages)
   const result = streamText({
     model: await currentModel(),
+    maxOutputTokens: AI_OUTPUT_TOKENS,
     system: ctx.system,
     tools: toolsFor(ctx),
     toolChoice: toolChoiceFor(ctx),
@@ -145,6 +152,7 @@ async function quizReply(ctx: Ctx, messages: UIMessage[]) {
     const modelMessages = await toModelMessages(messages)
     const result = await generateText({
       model: await currentModel(),
+      maxOutputTokens: AI_OUTPUT_TOKENS,
       system: ctx.system,
       tools: toolsFor({ ...ctx, quiz: true }),
       toolChoice: { type: 'tool', toolName: 'create_quiz' },

@@ -77,7 +77,11 @@ export function WizardForm() {
             notes.push(note)
         }
         setProgress('Drafting your brief and syllabus…')
-        await draftPlan(planId, input)
+        const result = await draftPlan(planId, input)
+        if (result.error) {
+          setError(result.error)
+          return
+        }
         if (notes.length)
           setSkipped({ planId, notes })
         else

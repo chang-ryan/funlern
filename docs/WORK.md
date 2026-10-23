@@ -2,6 +2,10 @@
 
 Shared copy: https://claude.ai/code/artifact/c40870de-a8d2-482f-8c9c-b1bdfd36cc17. Keep both in sync.
 
+## Production hardening (2026-10-22, draft)
+
+Worktree: `/private/tmp/funlern-production-hardening`, branch `fix/production-hardening`, based on freshly fetched `origin/main` at `586eb48`. Draft work covers message ownership, verified database TLS, durable AI request limits, preview isolation, upload limits, and dependency monitoring. See [the rollout checklist](PRODUCTION.md). Implementation is paused for coordination with a separate pressure-testing agent. TLS still needs the Supabase CA certificate, and full smoke/build validation remains outstanding. No production configuration or data was changed. The external shared artifact has not been updated.
+
 ## Overview
 
 funlern is an interactive learning app, not a general chat clone. You start by saying what you want to learn, set a minimal goal, then work through it: highlight any passage to ask about it in a side thread, answer clarifying questions and pop quizzes as cards, and earn progress as you go. The first user is me, learning faster; it doubles as a showcase.

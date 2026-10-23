@@ -59,10 +59,14 @@ jobs:
           } > .env.local
       - name: Start the app on the scripted model
         run: |
-          pnpm dev:mock > dev.log 2>&1 &
+          AI_REQUESTS_PER_MINUTE=1000 AI_REQUESTS_PER_DAY=1000 AI_REQUESTS_GLOBAL_PER_DAY=10000 pnpm dev:mock > dev.log 2>&1 &
           for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3100/login && exit 0; sleep 2; done
           cat dev.log
           exit 1
+      - name: Database security regressions (isolated local schema)
+        run: |
+          eval "$(supabase status -o env)"
+          TEST_DATABASE_URL="$DB_URL" pnpm exec vitest run lib/db/security.integration.test.ts
       - run: pnpm test:smoke
       - if: failure()
         run: tail -100 dev.log
