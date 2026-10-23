@@ -1,4 +1,4 @@
-import { MATERIAL_LIMITS } from './material'
+import { FILE_TOO_LARGE, MATERIAL_LIMITS } from './material'
 
 // Adds one file to a plan's material from the browser. Client-safe.
 
@@ -7,7 +7,7 @@ export type MaterialUpload = { file: File } | { name: string, text: string }
 /** Uploads a file or pasted text to the plan. Resolves to null when added, or the reason it wasn't. */
 export async function uploadMaterial(planId: string, upload: MaterialUpload): Promise<string | null> {
   if ('file' in upload && upload.file.size > MATERIAL_LIMITS.bytes)
-    return `That file is over ${MATERIAL_LIMITS.bytes / 1024 / 1024}MB.`
+    return FILE_TOO_LARGE
   const body = new FormData()
   if ('file' in upload) {
     body.set('file', upload.file)

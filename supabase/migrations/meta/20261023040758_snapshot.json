@@ -1,11 +1,11 @@
 {
-  "id": "073770e5-a016-49c8-8820-db19509e3afa",
+  "id": "1fe94c1f-9369-415b-8a86-d5d805f15436",
   "prevId": "a86826ca-2561-48f7-b310-f4e5d03546ff",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.ai_usage": {
-      "name": "ai_usage",
+    "public.ai_usage_counters": {
+      "name": "ai_usage_counters",
       "schema": "",
       "columns": {
         "scope": {
@@ -33,11 +33,33 @@
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "ai_usage_counters_user_id_window_start_index": {
+          "name": "ai_usage_counters_user_id_window_start_index",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "window_start",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
-        "ai_usage_user_id_profiles_id_fk": {
-          "name": "ai_usage_user_id_profiles_id_fk",
-          "tableFrom": "ai_usage",
+        "ai_usage_counters_user_id_profiles_id_fk": {
+          "name": "ai_usage_counters_user_id_profiles_id_fk",
+          "tableFrom": "ai_usage_counters",
           "tableTo": "profiles",
           "columnsFrom": [
             "user_id"
@@ -50,8 +72,8 @@
         }
       },
       "compositePrimaryKeys": {
-        "ai_usage_scope_window_start_pk": {
-          "name": "ai_usage_scope_window_start_pk",
+        "ai_usage_counters_scope_window_start_pk": {
+          "name": "ai_usage_counters_scope_window_start_pk",
           "columns": [
             "scope",
             "window_start"

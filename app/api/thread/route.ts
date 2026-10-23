@@ -2,15 +2,15 @@ import type { UIMessage } from 'ai'
 import { createUIMessageStreamResponse, stepCountIs, streamText, toUIMessageStream, validateUIMessages } from 'ai'
 import { markCacheBreakpoint } from '@/lib/ai/cache'
 import { hideTools } from '@/lib/ai/hide-tools'
-import { AI_OUTPUT_TOKENS } from '@/lib/ai/limits'
+import { AI_OUTPUT_TOKENS, MAX_MESSAGE_CHARS, unitsFor } from '@/lib/ai/limits'
 import { toModelMessages } from '@/lib/ai/messages'
-import { currentModel } from '@/lib/ai/model'
+import { currentModel, currentModelId } from '@/lib/ai/model'
 import { threadFrame } from '@/lib/ai/prompts/turn'
 import { finishMetadata, saveReplyWhenDone } from '@/lib/ai/reply'
 import { systemFor } from '@/lib/ai/system'
 import { toolChoiceFor, toolsFor } from '@/lib/ai/tools'
 import { placeTurn } from '@/lib/ai/turn'
-import { NOT_FOUND, UNAUTHORIZED } from '@/lib/auth'
+import { errorResponse, NOT_FOUND, UNAUTHORIZED } from '@/lib/auth'
 import { aiLimitResponse, reserveAiRequest } from '@/lib/db/ai-usage'
 import { deleteThreadMessagesFrom, getConversation, getMessages, getThread, getThreadMessages, saveThreadMessages } from '@/lib/db/queries'
 import { stampSent, textOf } from '@/lib/messages'
@@ -22,8 +22,10 @@ export async function POST(req: Request) {
     return UNAUTHORIZED()
 
   const { id, message }: { id: string, message: UIMessage } = await req.json()
-  if (message.role !== 'user')
-    return Response.json({ error: 'Only learner messages.' }, { status: 400 })
+  if (message?.role !== 'user')
+    return errorResponse(400, 'Only learner messages.')
+  if (JSON.stringify(message.parts ?? []).length > MAX_MESSAGE_CHARS)
+    return errorResponse(413, 'That question is too long.')
   const t = await getThread(userId, id)
   if (!t)
     return NOT_FOUND()
@@ -33,7 +35,7 @@ export async function POST(req: Request) {
   const turn = placeTurn(await getThreadMessages(id), message)
   const threadMessages = await validateUIMessages({ messages: [...turn.history, turn.retry ? turn.message : stampSent(turn.message)] })
 
-  const limit = await reserveAiRequest(userId)
+  const limit = await reserveAiRequest(userId, unitsFor(await currentModelId()))
   if (limit)
     return aiLimitResponse(limit)
 

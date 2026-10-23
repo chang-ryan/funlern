@@ -21,6 +21,10 @@ describe('database transport', () => {
       expect(databaseOptions(`postgres://user:example@${host}:55322/postgres`).ssl).toBe(false)
     expect(databaseOptions('postgres://user:example@localhost.evil.example/postgres').ssl).toEqual({ rejectUnauthorized: true })
   })
+  it('treats a missing or unparseable URL as remote, without throwing at import', () => {
+    for (const url of [undefined, '', 'postgres://user:example@host-a:5432,host-b:5432/postgres', 'not a url'])
+      expect(databaseOptions(url).ssl).toEqual({ rejectUnauthorized: true })
+  })
 })
 
 describe('preview isolation', () => {

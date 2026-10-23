@@ -240,10 +240,15 @@ export const quizAnswers = pgTable('quiz_answers', {
   ...timestamps,
 }).enableRLS()
 
-// Shared request budgets for all paid AI entry points. No Data API access.
-export const aiUsage = pgTable('ai_usage', {
+// Shared request budgets for all paid AI entry points: one counter per scope (a learner's minute or day, or the
+// app's day) and window. `requests` counts units (lib/ai/limits.ts). No Data API access.
+export const aiUsageCounters = pgTable('ai_usage_counters', {
   scope: text().notNull(),
   windowStart: timestamp({ withTimezone: true }).notNull(),
   userId: uuid().references(() => profiles.id, { onDelete: 'cascade' }),
   requests: integer().notNull(),
-}, t => [primaryKey({ columns: [t.scope, t.windowStart] })]).enableRLS()
+}, t => [
+  primaryKey({ columns: [t.scope, t.windowStart] }),
+  // Pruning a learner's old windows, and the cascade when a profile is deleted.
+  index().on(t.userId, t.windowStart),
+]).enableRLS()

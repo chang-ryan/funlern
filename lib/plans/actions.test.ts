@@ -7,6 +7,7 @@ vi.mock('@/lib/db/plans', () => ({ getPlan: async () => ({ id: 'owned-plan' }) }
 vi.mock('@/lib/db/materials', () => ({ getActiveMaterials: vi.fn() }))
 vi.mock('@/lib/db/queries', () => ({ getConversation: vi.fn() }))
 vi.mock('ai', () => ({ generateText: vi.fn(), Output: { object: vi.fn() } }))
+vi.mock('@/lib/ai/model', () => ({ currentModel: vi.fn(), currentModelId: async () => 'claude-haiku-5-5', NO_THINKING: {} }))
 
 it('returns the plan quota error without calling the model', async () => {
   const { draftPlan } = await import('./actions')

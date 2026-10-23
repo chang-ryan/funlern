@@ -3,8 +3,8 @@
 import type { WizardInput } from './wizard'
 import { generateText, Output } from 'ai'
 import { z } from 'zod'
-import { AI_OUTPUT_TOKENS } from '@/lib/ai/limits'
-import { currentModel, NO_THINKING } from '@/lib/ai/model'
+import { DRAFT_OUTPUT_TOKENS, unitsFor } from '@/lib/ai/limits'
+import { currentModel, currentModelId, NO_THINKING } from '@/lib/ai/model'
 import { planDraftPrompt } from '@/lib/ai/prompts/tasks/plan-draft'
 import { requireUser } from '@/lib/auth'
 import { reserveAiRequest } from '@/lib/db/ai-usage'
@@ -46,13 +46,13 @@ export async function draftPlan(planId: string, input: WizardInput) {
   const plan = await plans.getPlan(userId, planId)
   if (!plan)
     throw new Error('Not found')
-  const limit = await reserveAiRequest(userId)
+  const limit = await reserveAiRequest(userId, unitsFor(await currentModelId()))
   if (limit)
     return { error: limit.error }
   const material = await getActiveMaterials(plan.id)
   const { output } = await generateText({
     model: await currentModel(),
-    maxOutputTokens: AI_OUTPUT_TOKENS,
+    maxOutputTokens: DRAFT_OUTPUT_TOKENS,
     output: Output.object({ schema: draft }),
     prompt: planDraftPrompt(answers, material),
     providerOptions: NO_THINKING,

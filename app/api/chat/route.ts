@@ -8,9 +8,9 @@ import { isAddedPart } from '@/lib/added-parts'
 import { markCacheBreakpoint } from '@/lib/ai/cache'
 import { parseCommand } from '@/lib/ai/commands'
 import { hideTools } from '@/lib/ai/hide-tools'
-import { AI_OUTPUT_TOKENS } from '@/lib/ai/limits'
+import { AI_OUTPUT_TOKENS, MAX_MESSAGE_CHARS, unitsFor } from '@/lib/ai/limits'
 import { toModelMessages } from '@/lib/ai/messages'
-import { currentModel, NO_THINKING } from '@/lib/ai/model'
+import { currentModel, currentModelId, NO_THINKING } from '@/lib/ai/model'
 import { finishMetadata, saveReplyWhenDone } from '@/lib/ai/reply'
 import { systemFor } from '@/lib/ai/system'
 import { titleConversation } from '@/lib/ai/title'
@@ -35,11 +35,18 @@ export async function POST(req: Request) {
     return UNAUTHORIZED()
 
   const { id, message, start }: { id: string, message: UIMessage, start?: SessionStart } = await req.json()
+  if (message?.role !== 'user')
+    return errorResponse(400, 'Only learner messages.')
+  if (JSON.stringify(message.parts ?? []).length > MAX_MESSAGE_CHARS)
+    return errorResponse(413, 'That message is too long. Add long text to the plan\'s material instead.')
+  // Before any write (starting the conversation, ending a quiz), so a refusal leaves nothing half-done.
+  const limit = await reserveAiRequest(userId, unitsFor(await currentModelId()))
+  if (limit)
+    return aiLimitResponse(limit)
+
   const convo = await getOrStartConversation(userId, id, start)
   if (!convo)
     return NOT_FOUND()
-  if (message.role !== 'user')
-    return errorResponse(400, 'Only learner messages.')
 
   const stored = await getMessages(id)
   const turn = placeTurn(stored, message)
@@ -80,10 +87,6 @@ export async function POST(req: Request) {
   const outgoing: UIMessage = { ...incoming, parts: [...added, ...own] }
 
   const messages = await validateUIMessages({ messages: [...turn.history, outgoing] })
-
-  const limit = await reserveAiRequest(userId)
-  if (limit)
-    return aiLimitResponse(limit)
 
   // Save the learner's message before calling the model, so a failed or dropped reply never loses it.
   if (turn.retry)

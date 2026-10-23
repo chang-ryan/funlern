@@ -1,5 +1,6 @@
 import { generateText } from 'ai'
 import { extractText, getDocumentProxy } from 'unpdf'
+import { TRANSCRIBE_OUTPUT_TOKENS } from '@/lib/ai/limits'
 import { NO_THINKING, taskModel } from '@/lib/ai/model'
 import { transcribePrompt } from '@/lib/ai/prompts/tasks/transcribe'
 import { MATERIAL_LIMITS } from '@/lib/plans/material'
@@ -17,8 +18,7 @@ export class ExtractError extends Error {}
  * pages Claude reads in one request.
  */
 export async function extractPdf(bytes: Uint8Array, beforeTranscription: () => Promise<void>): Promise<{ text: string, pages: number, transcribed: boolean }> {
-  const pdf = await getDocumentProxy(bytes.slice())
-  const { totalPages, text } = await extractText(pdf, { mergePages: false })
+  const { totalPages, text } = await readTextLayer(bytes)
   if (text.every(page => page.trim().length >= SPARSE_PAGE))
     return { text: text.map((page, i) => `[page ${i + 1}]\n\n${page.trim()}`).join('\n\n'), pages: totalPages, transcribed: false }
   if (totalPages > MATERIAL_LIMITS.transcribePages)
@@ -26,7 +26,7 @@ export async function extractPdf(bytes: Uint8Array, beforeTranscription: () => P
 
   await beforeTranscription()
   const result = await generateText({
-    maxOutputTokens: 8192,
+    maxOutputTokens: TRANSCRIBE_OUTPUT_TOKENS,
     model: taskModel(),
     messages: [{ role: 'user', content: [
       { type: 'file', data: bytes, mediaType: 'application/pdf' },
@@ -35,6 +35,16 @@ export async function extractPdf(bytes: Uint8Array, beforeTranscription: () => P
     providerOptions: NO_THINKING,
   })
   if (result.finishReason === 'length')
-    throw new ExtractError('That scan is too long to transcribe in one upload. Split it into smaller files.')
+    throw new ExtractError('That scan is too long to transcribe: its text would be over a plan\'s material limit. Split it into smaller files.')
   return { text: result.text.trim(), pages: totalPages, transcribed: true }
+}
+
+/** A malformed or encrypted file is the learner's to fix; anything else (the model, the network) is ours. */
+async function readTextLayer(bytes: Uint8Array) {
+  try {
+    return await extractText(await getDocumentProxy(bytes.slice()), { mergePages: false })
+  }
+  catch {
+    throw new ExtractError('That PDF couldn\'t be read.')
+  }
 }

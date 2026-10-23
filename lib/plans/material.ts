@@ -8,6 +8,8 @@ export type MaterialKind = (typeof MATERIAL_KINDS)[number]
 // Leave room for multipart overhead under Vercel's 4.5 MB request limit.
 export const MATERIAL_LIMITS = { files: 5, tokens: 30_000, bytes: 4 * 1024 * 1024, transcribePages: 100 }
 
+export const FILE_TOO_LARGE = `That file is over ${MATERIAL_LIMITS.bytes / 1024 / 1024}MB.`
+
 /** Rough token count for English prose and code; close enough for a cap. */
 export function estimateTokens(text: string) {
   return Math.ceil(text.length / 3.5)

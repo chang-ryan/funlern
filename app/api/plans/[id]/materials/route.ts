@@ -1,11 +1,11 @@
 import type { MaterialKind } from '@/lib/plans/material'
 import { revalidatePath } from 'next/cache'
 import { errorResponse, NOT_FOUND, UNAUTHORIZED } from '@/lib/auth'
-import { aiLimitResponse, reserveAiRequest } from '@/lib/db/ai-usage'
+import { AiLimitError, aiLimitResponse, reserveAiRequest } from '@/lib/db/ai-usage'
 import { getActiveMaterials, insertMaterial } from '@/lib/db/materials'
 import { getPlan } from '@/lib/db/plans'
 import { ExtractError, extractPdf } from '@/lib/material/extract'
-import { estimateTokens, MATERIAL_LIMITS, materialRefusal } from '@/lib/plans/material'
+import { estimateTokens, FILE_TOO_LARGE, MATERIAL_LIMITS, materialRefusal } from '@/lib/plans/material'
 import { createAdminClient, MATERIALS_BUCKET } from '@/lib/supabase/admin'
 import { getUserId } from '@/lib/supabase/server'
 
@@ -44,7 +44,7 @@ export async function POST(req: Request, { params }: RouteContext<'/api/plans/[i
   }
 
   if (file.size > MATERIAL_LIMITS.bytes)
-    return refuse(`That file is over ${MATERIAL_LIMITS.bytes / 1024 / 1024}MB.`)
+    return refuse(FILE_TOO_LARGE)
   const kind: MaterialKind | null = /\.pdf$/i.test(file.name) ? 'pdf' : /\.(?:md|markdown|txt)$/i.test(file.name) ? 'markdown' : null
   if (!kind)
     return refuse('Upload a PDF or a Markdown (.md) file.', 400)
@@ -57,18 +57,20 @@ export async function POST(req: Request, { params }: RouteContext<'/api/plans/[i
     const full = materialRefusal(current, { tokens: 0 })
     if (full)
       return refuse(full)
-    let limit: Awaited<ReturnType<typeof reserveAiRequest>> = null
     try {
       ({ text, pages } = await extractPdf(bytes, async () => {
-        limit = await reserveAiRequest(userId)
+        // Transcription runs on the task model (Haiku): one unit.
+        const limit = await reserveAiRequest(userId)
         if (limit)
-          throw new Error('AI limit reached')
+          throw new AiLimitError(limit)
       }))
     }
     catch (error) {
-      if (limit)
-        return aiLimitResponse(limit)
-      return refuse(error instanceof ExtractError ? error.message : 'That PDF couldn\'t be read.', error instanceof ExtractError ? 422 : 400)
+      if (error instanceof AiLimitError)
+        return aiLimitResponse(error.limit)
+      if (error instanceof ExtractError)
+        return refuse(error.message)
+      throw error // Ours (the database, the model): a 500 in the logs, not "your PDF is broken".
     }
   }
   else {
