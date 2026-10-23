@@ -3,9 +3,11 @@
 import type { WizardInput } from './wizard'
 import { generateText, Output } from 'ai'
 import { z } from 'zod'
-import { currentModel, NO_THINKING } from '@/lib/ai/model'
+import { DRAFT_OUTPUT_TOKENS, unitsFor } from '@/lib/ai/limits'
+import { currentModel, currentModelId, NO_THINKING } from '@/lib/ai/model'
 import { planDraftPrompt } from '@/lib/ai/prompts/tasks/plan-draft'
 import { requireUser } from '@/lib/auth'
+import { reserveAiRequest } from '@/lib/db/ai-usage'
 import { getActiveMaterials } from '@/lib/db/materials'
 import * as plans from '@/lib/db/plans'
 import { getConversation } from '@/lib/db/queries'
@@ -44,9 +46,13 @@ export async function draftPlan(planId: string, input: WizardInput) {
   const plan = await plans.getPlan(userId, planId)
   if (!plan)
     throw new Error('Not found')
+  const limit = await reserveAiRequest(userId, unitsFor(await currentModelId()))
+  if (limit)
+    return { error: limit.error }
   const material = await getActiveMaterials(plan.id)
   const { output } = await generateText({
     model: await currentModel(),
+    maxOutputTokens: DRAFT_OUTPUT_TOKENS,
     output: Output.object({ schema: draft }),
     prompt: planDraftPrompt(answers, material),
     providerOptions: NO_THINKING,
@@ -55,6 +61,7 @@ export async function draftPlan(planId: string, input: WizardInput) {
   await plans.writeDocVersion({ planId: plan.id, kind: 'syllabus', body: renderDoc('syllabus', output.syllabus), author: 'tutor', summary: 'First draft' })
   if (!plan.title)
     await plans.renamePlan(userId, plan.id, output.title.trim().slice(0, 80) || null)
+  return { error: null }
 }
 
 /** Renames a plan; an empty title clears it. */

@@ -1,7 +1,7 @@
 import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import type { DocKind } from '@/lib/plans/docs'
 import { sql } from 'drizzle-orm'
-import { boolean, index, integer, jsonb, pgEnum, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { boolean, index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { authUsers } from 'drizzle-orm/supabase'
 import { DOC_KINDS } from '@/lib/plans/docs'
 import { MATERIAL_KINDS } from '@/lib/plans/material'
@@ -239,3 +239,16 @@ export const quizAnswers = pgTable('quiz_answers', {
   correct: boolean().notNull(),
   ...timestamps,
 }).enableRLS()
+
+// Shared request budgets for all paid AI entry points: one counter per scope (a learner's minute or day, or the
+// app's day) and window. `requests` counts units (lib/ai/limits.ts). No Data API access.
+export const aiUsageCounters = pgTable('ai_usage_counters', {
+  scope: text().notNull(),
+  windowStart: timestamp({ withTimezone: true }).notNull(),
+  userId: uuid().references(() => profiles.id, { onDelete: 'cascade' }),
+  requests: integer().notNull(),
+}, t => [
+  primaryKey({ columns: [t.scope, t.windowStart] }),
+  // Pruning a learner's old windows, and the cascade when a profile is deleted.
+  index().on(t.userId, t.windowStart),
+]).enableRLS()

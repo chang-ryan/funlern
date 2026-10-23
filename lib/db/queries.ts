@@ -76,7 +76,11 @@ export async function getMessage(conversationId: string, id: string) {
 export async function saveMessages(conversationId: string, uiMessages: UIMessage[]) {
   if (!uiMessages.length)
     return
-  await db.insert(messages).values(toRows(uiMessages).map(r => ({ ...r, conversationId }))).onConflictDoUpdate({ target: messages.id, set: UPSERT })
+  await db.transaction(async (tx) => {
+    const saved = await tx.insert(messages).values(toRows(uiMessages).map(r => ({ ...r, conversationId }))).onConflictDoUpdate({ target: messages.id, set: UPSERT, setWhere: eq(messages.conversationId, conversationId) }).returning({ id: messages.id })
+    if (saved.length !== uiMessages.length)
+      throw new Error('Message ID is already in use.')
+  })
 }
 
 /** Drops main's messages from `index` on: a retried turn replaces whatever followed it. */
@@ -118,7 +122,11 @@ export async function getThreadMessages(threadId: string) {
 export async function saveThreadMessages(threadId: string, uiMessages: UIMessage[]) {
   if (!uiMessages.length)
     return
-  await db.insert(threadMessages).values(toRows(uiMessages).map(r => ({ ...r, threadId }))).onConflictDoUpdate({ target: threadMessages.id, set: UPSERT })
+  await db.transaction(async (tx) => {
+    const saved = await tx.insert(threadMessages).values(toRows(uiMessages).map(r => ({ ...r, threadId }))).onConflictDoUpdate({ target: threadMessages.id, set: UPSERT, setWhere: eq(threadMessages.threadId, threadId) }).returning({ id: threadMessages.id })
+    if (saved.length !== uiMessages.length)
+      throw new Error('Message ID is already in use.')
+  })
 }
 
 export async function deleteThreadMessagesFrom(threadId: string, index: number) {

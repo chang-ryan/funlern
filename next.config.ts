@@ -1,4 +1,7 @@
 import type { NextConfig } from 'next'
+import { assertPreviewIsolation } from './lib/config/deployment'
+
+assertPreviewIsolation(process.env)
 
 // Not a full CSP (scripts and styles are left alone). It stops the site being framed (clickjacking) and images
 // loading from anywhere but here: an image in a tutor reply could otherwise carry chat or plan text to another

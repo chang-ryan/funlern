@@ -113,6 +113,13 @@
       "when": 1792725252141,
       "tag": "20261023031412_profile_names_backfill",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792728478499,
+      "tag": "20261023040758_ai_usage_counters",
+      "breakpoints": true
     }
   ]
 }

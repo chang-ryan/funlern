@@ -201,4 +201,30 @@ await asLearner(APP, 'smoke', async ({ userId, cookie, send, post, addMaterial }
   await post('/api/chat', { id: crypto.randomUUID(), message: say(tool('web_search', { query: 'outside a plan' })) })
   assert.equal(await searches(), 3, 'chats outside a plan do not search')
   step('web search', 'plan sessions search; logged; results kept in history; 2 a turn; none outside a plan')
+
+  // Message size is capped before anything is reserved or saved.
+  const huge = crypto.randomUUID()
+  assert.equal((await send('/api/chat', { id: huge, message: say('x'.repeat(30_001)) })).status, 413, 'an oversized message is refused')
+  assert.equal(await count(sql`select count(*)::int from conversations where id = ${huge}`), 0)
+
+  // One shared reservation covers all paid entry points. Fill today's user budget without calling a provider.
+  await sql`update ai_usage_counters set requests = 1000000 where user_id = ${userId} and scope = ${`user:${userId}:day`}`
+  for (const [path, id] of [['/api/chat', c.id], ['/api/thread', t.id]]) {
+    const rejected = say('This must not reach the model')
+    const response = await send(path, { id, message: rejected })
+    assert.equal(response.status, 429, 'paid routes reject exhausted users')
+    assert.ok(Number(response.headers.get('retry-after')) > 0, 'quota response includes retry time')
+    assert.match((await response.json()).error, /limit/)
+    assert.equal(await count(sql`select count(*)::int from messages where id = ${rejected.id}`), 0)
+    assert.equal(await count(sql`select count(*)::int from thread_messages where id = ${rejected.id}`), 0)
+  }
+  // A refused first message starts no conversation: the reservation comes before any write.
+  const fresh = crypto.randomUUID()
+  assert.equal((await send('/api/chat', { id: fresh, message: say('hello') })).status, 429)
+  assert.equal(await count(sql`select count(*)::int from conversations where id = ${fresh}`), 0, 'a refused first message leaves no conversation')
+  const blockedScan = await addMaterial(plan.id, { file: new File([pdfWithPages([''])], 'blocked.pdf', { type: 'application/pdf' }) })
+  assert.equal(blockedScan.status, 429, 'PDF transcription shares the user budget')
+  const oversized = await addMaterial(plan.id, { file: new File([new Uint8Array(4 * 1024 * 1024 + 1)], 'large.pdf', { type: 'application/pdf' }) })
+  assert.equal(oversized.status, 422, 'server also enforces the 4 MiB upload cap')
+  step('AI budgets', 'oversized messages refused; chat, threads and PDF transcription refuse exhausted quotas before any write or paid work; oversized uploads refused')
 })

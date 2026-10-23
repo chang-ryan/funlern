@@ -33,7 +33,9 @@ function pdfWithPages(lines: string[]) {
 describe('extractPdf', () => {
   it('reads the text layer page by page, without calling a model', async () => {
     const pdf = pdfWithPages(['A closure is a function bundled with its lexical environment.', 'Closures capture variables, not values, in JavaScript.'])
-    const { text, pages, transcribed } = await extractPdf(pdf)
+    const { text, pages, transcribed } = await extractPdf(pdf, async () => {
+      throw new Error('Text PDFs must not use AI')
+    })
     expect({ pages, transcribed }).toEqual({ pages: 2, transcribed: false })
     expect(text).toMatch(/^\[page 1\]\n\nA closure is a function/)
     expect(text).toMatch(/\[page 2\]\n\nClosures capture variables/)

@@ -35,6 +35,9 @@ export function WizardForm() {
   const [progress, setProgress] = useState<string | null>(null)
   // Files that couldn't be added; the plan is created anyway and can take them later.
   const [skipped, setSkipped] = useState<{ planId: string, notes: string[] } | null>(null)
+  // A plan made and its material added, waiting on its draft. Trying again after a failed draft (or a usage
+  // limit) reuses it, so a retry never makes a second plan or uploads (and transcribes) the files twice.
+  const [made, setMade] = useState<{ planId: string, notes: string[] } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const full = picks.length >= MATERIAL_LIMITS.files
 
@@ -67,21 +70,30 @@ export function WizardForm() {
     const input: WizardInput = { what, why, level, seriousness, deadline: seriousness === 'serious' && deadline ? deadline : undefined }
     startTransition(async () => {
       try {
-        setProgress('Creating your plan…')
-        const { planId } = await startPlan(input)
-        const notes: string[] = []
-        for (const pick of picks) {
-          setProgress(pick.kind === 'file' && pick.file.name.toLowerCase().endsWith('.pdf') ? `Reading ${pickName(pick)}…` : `Adding ${pickName(pick)}…`)
-          const note = await upload(planId, pick)
-          if (note)
-            notes.push(note)
+        let plan = made
+        if (!plan) {
+          setProgress('Creating your plan…')
+          const { planId } = await startPlan(input)
+          const notes: string[] = []
+          for (const pick of picks) {
+            setProgress(pick.kind === 'file' && pick.file.name.toLowerCase().endsWith('.pdf') ? `Reading ${pickName(pick)}…` : `Adding ${pickName(pick)}…`)
+            const note = await upload(planId, pick)
+            if (note)
+              notes.push(note)
+          }
+          plan = { planId, notes }
+          setMade(plan)
         }
         setProgress('Drafting your brief and syllabus…')
-        await draftPlan(planId, input)
-        if (notes.length)
-          setSkipped({ planId, notes })
+        const result = await draftPlan(plan.planId, input)
+        if (result.error) {
+          setError(result.error)
+          return
+        }
+        if (plan.notes.length)
+          setSkipped(plan)
         else
-          router.push(`/p/${planId}/mc`)
+          router.push(`/p/${plan.planId}/mc`)
       }
       catch {
         setError('The tutor couldn\'t draft your plan. Try again.')

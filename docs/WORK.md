@@ -2,6 +2,10 @@
 
 Shared copy: https://claude.ai/code/artifact/c40870de-a8d2-482f-8c9c-b1bdfd36cc17. Keep both in sync.
 
+## Production hardening (2026-10-22)
+
+PR [#17](https://github.com/chang-ryan/funlern/pull/17), branch `fix/production-hardening`, on top of #18 (Next 16.4.2, headers, thread validation). It scopes message upserts to their parent (transactional rejection of a foreign id), verifies remote Postgres TLS with `DATABASE_SSL_CA`, adds durable AI request budgets (reserved before any write; units by model; personal windows first; an owner exemption from the shared day budget; a 30k-character message cap), raises output caps to fit real replies, rejects previews pointing at production, caps uploads at 4 MiB, and adds Dependabot configuration. See [the rollout checklist](PRODUCTION.md): the migration and the CA must be in place before merging.
+
 ## Overview
 
 funlern is an interactive learning app, not a general chat clone. You start by saying what you want to learn, set a minimal goal, then work through it: highlight any passage to ask about it in a side thread, answer clarifying questions and pop quizzes as cards, and earn progress as you go. The first user is me, learning faster; it doubles as a showcase.
@@ -230,7 +234,7 @@ What to borrow (MIT code can be copied with its license notice):
   - [x] 2.2 Fold `<plan_updated>` (changed sections) into the next learner message; advance `seen`
   - [x] 2.3 `update_doc` tool, chat note on each write, `toolChoice: 'auto'` in plan sessions, `ask_user` out of the tool set; `create_quiz` refuses outside /quiz-me and its calls are hidden from the stream and saved reply
 - Plans, step 3: material
-  - [x] 3.1 `plan_materials` (write-once, soft delete); private Storage for originals; upload and paste; Material page with the "what goes here" copy; caps of 5 files, 10MB per file and ~30k tokens (no page limit; transcription up to 100 pages)
+  - [x] 3.1 `plan_materials` (write-once, soft delete); private Storage for originals; upload and paste; Material page with the "what goes here" copy; caps of 5 files, 4 MiB per file and ~30k tokens (no page limit; transcription up to 100 pages)
   - [x] 3.2 Extraction once at upload: pdf.js text layer, one-time Claude transcription when any page has no text; preview and token count
   - [x] 3.3 Material in the system prompt, pinned per session; additions and removals fold into the next learner message
   - [x] 3.4 Material in the wizard: files and pasted text are uploaded to the new plan before drafting, so the first syllabus follows the material and cites it; files that can't be added are listed, and the plan is created anyway
